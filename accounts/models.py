@@ -68,6 +68,8 @@ class User(AbstractBaseUser):
 
 
 
+    otp_code = models.CharField(max_length=10, blank=True, null=True)
+
     email_token = models.CharField(max_length=10, blank=True, null=True)
     email_verified = models.BooleanField(default=False)
 
