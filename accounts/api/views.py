@@ -3,6 +3,7 @@ import re
 from celery import chain
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate
+from django.core.files.base import ContentFile
 from django.shortcuts import render
 from django.template.loader import get_template
 from rest_framework import status, generics
@@ -34,7 +35,8 @@ def register_user(request):
         email = request.data.get('email', "").lower()
         full_name = request.data.get('full_name', "")
         phone = request.data.get('phone', "")
-        photo = request.data.get('photo', "")
+        photo = request.FILES.get('photo')
+        #photo = request.data.get('photo', "")
         country = request.data.get('country', "")
         password = request.data.get('password', "")
         password2 = request.data.get('password2', "")
@@ -89,14 +91,14 @@ def register_user(request):
                 user=user,
                 phone=phone,
                 country=country,
-                photo=photo
+                photo=photo  # Save the photo as ContentFile
 
             )
             user_profile.save()
 
             data['phone'] = user_profile.phone
             data['country'] = user_profile.country
-            data['photo'] = user_profile.photo
+            data['photo'] = user_profile.photo.url
 
         token = Token.objects.get(user=user).key
         data['token'] = token
@@ -183,7 +185,7 @@ def is_valid_password(password):
         return False
 
     # Check for at least one special character
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+    if not re.search(r'[!@#\$%^&*_()-+=/.,<>?"~`£{}|:;]', password):
         return False
 
     return True
