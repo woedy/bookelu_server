@@ -53,7 +53,8 @@ INSTALLED_APPS = [
 
     'accounts',
     'user_profile',
-    'activities'
+    'activities',
+    'shop'
 
 ]
 

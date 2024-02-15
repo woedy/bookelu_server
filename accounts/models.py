@@ -58,11 +58,22 @@ class UserManager(BaseUserManager):
         return qs
 
 
+USER_TYPE = (
+    ('Client', 'Client'),
+    ('Saloon Staff', 'Saloon Staff'),
+    ('Admin', 'Admin'),
+
+)
+
 class User(AbstractBaseUser):
     user_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     username = models.CharField(max_length=255, blank=True, null=True, unique=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
+
+
+    user_type = models.CharField(max_length=100, choices=USER_TYPE, blank=True, null=True)
+
 
     fcm_token = models.TextField(blank=True, null=True)
 
