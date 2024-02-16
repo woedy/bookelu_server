@@ -2,6 +2,9 @@ import os
 import random
 
 from django.db import models
+from django.db.models.signals import pre_save
+
+from bookelu_project.utils import unique_shop_id_generator
 
 
 def get_file_ext(filepath):
@@ -103,6 +106,13 @@ class Shop(models.Model):
     location_name = models.CharField(max_length=200, null=True, blank=True)
     lat = models.DecimalField(max_digits=30, decimal_places=15, null=True, blank=True)
     lng = models.DecimalField(max_digits=30, decimal_places=15, null=True, blank=True)
+
+def pre_save_shop_id_receiver(sender, instance, *args, **kwargs):
+    if not instance.shop_id:
+        instance.shop_id = unique_shop_id_generator(instance)
+
+pre_save.connect(pre_save_shop_id_receiver, sender=Shop)
+
 
 
 class ShopInterior(models.Model):

@@ -28,6 +28,23 @@ def unique_user_id_generator(instance):
         return
     return user_id
 
+
+def unique_shop_id_generator(instance):
+    """
+    This is for a django project with a shop_id field
+    :param instance:
+    :return:
+    """
+
+    size = random.randint(30,45)
+    shop_id = random_string_generator(size=size)
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(shop_id=shop_id).exists()
+    if qs_exists:
+        return
+    return shop_id
+
 def generate_email_token():
     code = ''
     for i in range(4):
