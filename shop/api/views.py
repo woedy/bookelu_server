@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from shop.api.serializers import ShopSerializer
+from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff
 
 
@@ -228,6 +228,35 @@ def list_all_shops_view(request):
     errors = {}
 
 
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+    shops = Shop.objects.all()
+
+    shops_serializer = ListShopsSerializer(shops, many=True)
+    if shops_serializer:
+        _shops = shops_serializer.data
+        data['shops'] = _shops
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', ])
+@permission_classes([])
+@authentication_classes([ ])
+def shop_details_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+
 
     shop_id = request.data.get('shop_id', '')
 
@@ -240,15 +269,14 @@ def list_all_shops_view(request):
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
-    shops = Shop.objects.all()
+    shop_detail = Shop.objects.get(shop_id=shop_id)
 
-    shops_serializer = ShopSerializer(shops, many=True)
-    if shops_serializer:
-        _shops = shops_serializer.data
-        data['shops'] = _shops
+    shop_detail_serializer = ShopDetailSerializer(shop_detail, many=False)
+    if shop_detail_serializer:
+        _shop = shop_detail_serializer.data
 
     payload['message'] = "Successful"
-    payload['data'] = data
+    payload['data'] = _shop
 
 
     return Response(payload, status=status.HTTP_200_OK)

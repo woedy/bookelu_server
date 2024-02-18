@@ -132,7 +132,10 @@ class ShopWork(models.Model):
 
 
 SERVICE_CHOICES = (
-    ('Hair Cut', 'Hair Cut'),
+    ('Haircut', 'Haircut'),
+    ('Nail Tech', 'Nail Tech'),
+    ('Massage', 'Massage'),
+    ('Hairstyle', 'Hairstyle'),
 
 
 )
