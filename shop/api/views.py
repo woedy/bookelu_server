@@ -258,7 +258,7 @@ def shop_details_view(request):
 
 
 
-    shop_id = request.data.get('shop_id', '')
+    shop_id = request.query_params.get('shop_id', None)
 
     if not shop_id:
         errors['shop_id'] = ["Shop id required"]

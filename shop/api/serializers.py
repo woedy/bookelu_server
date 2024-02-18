@@ -48,10 +48,10 @@ class ShopStaffSerializer(serializers.ModelSerializer):
 
 class ShopDetailSerializer(serializers.ModelSerializer):
     shop_services = ShopServiceSerializer(many=True)
-    shop_interior = ShopStaffSerializer(many=True)
-    shop_exterior = ShopWorkSerializer(many=True)
-    shop_work = ShopExteriorSerializer(many=True)
-    shop_staffs = ShopInteriorSerializer(many=True)
+    shop_interior = ShopInteriorSerializer(many=True)
+    shop_exterior = ShopExteriorSerializer(many=True)
+    shop_work = ShopWorkSerializer(many=True)
+    shop_staffs = ShopStaffSerializer(many=True)
 
     class Meta:
         model = Shop
