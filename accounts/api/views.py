@@ -55,10 +55,6 @@ def register_user(request):
         if not phone:
             errors['phone'] = ['Phone number is required.']
 
-
-        if not photo:
-            errors['photo'] = ['User photo is required.']
-
         if not country:
             errors['country'] = ['Country is required.']
 
