@@ -1,9 +1,19 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff
+from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff, ShopPackage
 
 User = get_user_model()
+
+
+class ShopPackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopPackage
+        fields = [
+            'package_name',
+            'price',
+            'rating',
+        ]
 
 
 class ShopServiceSerializer(serializers.ModelSerializer):
@@ -43,6 +53,7 @@ class ShopStaffSerializer(serializers.ModelSerializer):
             'photo',
             'role',
             'photo',
+            'rating',
         ]
 
 
@@ -52,6 +63,7 @@ class ShopDetailSerializer(serializers.ModelSerializer):
     shop_exterior = ShopExteriorSerializer(many=True)
     shop_work = ShopWorkSerializer(many=True)
     shop_staffs = ShopStaffSerializer(many=True)
+    shop_packages = ShopPackageSerializer(many=True)
 
     class Meta:
         model = Shop
@@ -76,12 +88,14 @@ class ShopDetailSerializer(serializers.ModelSerializer):
             'location_name',
             'lat',
             'lng',
+            'rating',
 
             'shop_services',
             'shop_interior',
             'shop_exterior',
             'shop_work',
             'shop_staffs',
+            'shop_packages',
 
         ]
 

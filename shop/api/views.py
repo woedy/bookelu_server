@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer
-from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff
+from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
 
 
 # Create your views here.
@@ -209,6 +209,46 @@ def setup_staff_view(request):
             staff_name=staff['staff_name'],
             role=staff['role'],
             photo=staff['photo'],
+        )
+
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([ ])
+def add_package_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+
+
+    shop_id = request.data.get('shop_id', '')
+    packages = request.data.get('packages', '')
+
+    if not packages:
+        errors['packages'] = ["Add at least one package required"]
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+    shop = Shop.objects.get(shop_id=shop_id)
+
+    for package in packages:
+        ShopPackage.objects.create(
+            shop=shop,
+            package_name=package['package_name'],
+            price=package['price'],
+
         )
 
 

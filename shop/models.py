@@ -90,6 +90,7 @@ class Shop(models.Model):
 
     special_features = models.CharField(max_length=255, null=True, blank=True)
 
+    rating = models.DecimalField(default=0.0, decimal_places=2, max_digits=2, null=True, blank=True)
 
 
     photo = models.ImageField(upload_to=upload_shop_logo_path, null=True, blank=True)
@@ -153,3 +154,15 @@ class ShopStaff(models.Model):
     staff_name = models.CharField(max_length=200,  null=True, blank=True)
     role = models.CharField(max_length=255, null=True, blank=True)
     photo = models.ImageField(upload_to=upload_staff_photo_path, null=True, blank=True)
+    rating = models.IntegerField(default=0, null=True, blank=True)
+
+
+
+
+class ShopPackage(models.Model):
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_packages')
+    package_name = models.CharField(max_length=200,  null=True, blank=True)
+    photo = models.ImageField(upload_to=upload_shop_work_path, null=True, blank=True)
+    price = models.CharField(max_length=255, null=True, blank=True)
+    rating = models.IntegerField(default=0, null=True, blank=True)
+
