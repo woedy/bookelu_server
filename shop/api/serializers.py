@@ -13,6 +13,7 @@ class ShopPackageSerializer(serializers.ModelSerializer):
             'package_name',
             'price',
             'rating',
+            'photo'
         ]
 
 
@@ -89,6 +90,7 @@ class ShopDetailSerializer(serializers.ModelSerializer):
             'lat',
             'lng',
             'rating',
+            'open',
 
             'shop_services',
             'shop_interior',

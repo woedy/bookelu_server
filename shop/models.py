@@ -66,6 +66,16 @@ def upload_staff_photo_path(instance, filename):
     )
 
 
+def upload_package_photo_path(instance, filename):
+    new_filename = random.randint(1, 3910209312)
+    name, ext = get_file_ext(filename)
+    final_filename = '{new_filename}{ext}'.format(new_filename=new_filename, ext=ext)
+    return "shop_work/{new_filename}/{final_filename}".format(
+        new_filename=new_filename,
+        final_filename=final_filename
+    )
+
+
 
 BUSINESS_TYPE_CHOICES = (
     ('Private', 'Private'),
@@ -96,6 +106,8 @@ class Shop(models.Model):
     photo = models.ImageField(upload_to=upload_shop_logo_path, null=True, blank=True)
 
     verify_code = models.CharField(max_length=10, blank=True, null=True)
+
+    open = models.BooleanField(default=True)
 
 
     street_address1 = models.CharField(max_length=255, null=True, blank=True)
@@ -149,6 +161,8 @@ class ShopService(models.Model):
 
 
 
+
+
 class ShopStaff(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_staffs')
     staff_name = models.CharField(max_length=200,  null=True, blank=True)
@@ -157,12 +171,15 @@ class ShopStaff(models.Model):
     rating = models.IntegerField(default=0, null=True, blank=True)
 
 
+class ServiceSpecialist(models.Model):
+    service = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='service_specialist')
+    specialist = models.ForeignKey(ShopStaff, on_delete=models.CASCADE, related_name='staff_specialist')
 
 
 class ShopPackage(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_packages')
     package_name = models.CharField(max_length=200,  null=True, blank=True)
-    photo = models.ImageField(upload_to=upload_shop_work_path, null=True, blank=True)
+    photo = models.ImageField(upload_to=upload_package_photo_path, null=True, blank=True)
     price = models.CharField(max_length=255, null=True, blank=True)
     rating = models.IntegerField(default=0, null=True, blank=True)
 
