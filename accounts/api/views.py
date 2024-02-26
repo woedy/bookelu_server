@@ -143,51 +143,6 @@ def register_user(request):
     return Response(payload)
 
 
-def check_email_exist(email):
-
-    qs = User.objects.filter(email=email)
-    if qs.exists():
-        return True
-    else:
-        return False
-
-
-def is_valid_email(email):
-    # Regular expression pattern for basic email validation
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-
-    # Using re.match to check if the email matches the pattern
-    if re.match(pattern, email):
-        return True
-    else:
-        return False
-
-
-def is_valid_password(password):
-    # Check for at least 8 characters
-    if len(password) < 8:
-        return False
-
-    # Check for at least one uppercase letter
-    if not re.search(r'[A-Z]', password):
-        return False
-
-    # Check for at least one lowercase letter
-    if not re.search(r'[a-z]', password):
-        return False
-
-    # Check for at least one digit
-    if not re.search(r'[0-9]', password):
-        return False
-
-    # Check for at least one special character
-    if not re.search(r'[-!@#\$%^&*_()-+=/.,<>?"~`£{}|:;]', password):
-        return False
-
-    return True
-
-
-
 
 @api_view(['POST', ])
 @permission_classes([])
@@ -409,6 +364,8 @@ class UserLogin(APIView):
         data["email"] = user.email
         data["full_name"] = user.full_name
         data["photo"] = user_profile.photo.url
+        data["country"] = user_profile.country
+        data["phone"] = user_profile.phone
         data["token"] = token.key
 
         payload['message'] = "Successful"
@@ -690,4 +647,52 @@ def new_password_reset_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+
+
+
+
+
+
+def check_email_exist(email):
+
+    qs = User.objects.filter(email=email)
+    if qs.exists():
+        return True
+    else:
+        return False
+
+
+def is_valid_email(email):
+    # Regular expression pattern for basic email validation
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+
+    # Using re.match to check if the email matches the pattern
+    if re.match(pattern, email):
+        return True
+    else:
+        return False
+
+
+def is_valid_password(password):
+    # Check for at least 8 characters
+    if len(password) < 8:
+        return False
+
+    # Check for at least one uppercase letter
+    if not re.search(r'[A-Z]', password):
+        return False
+
+    # Check for at least one lowercase letter
+    if not re.search(r'[a-z]', password):
+        return False
+
+    # Check for at least one digit
+    if not re.search(r'[0-9]', password):
+        return False
+
+    # Check for at least one special character
+    if not re.search(r'[-!@#\$%^&*_()-+=/.,<>?"~`£{}|:;]', password):
+        return False
+
+    return True
 

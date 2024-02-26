@@ -1,5 +1,9 @@
 import random
+import re
 import string
+from django.contrib.auth import get_user_model, authenticate
+
+
 
 
 def random_string_generator(size=10, chars=string.ascii_lowercase + string.digits):
@@ -50,3 +54,5 @@ def generate_email_token():
     for i in range(4):
         code += str(random.randint(0, 9))
     return code
+
+

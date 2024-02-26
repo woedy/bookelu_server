@@ -4,8 +4,10 @@ import random
 from django.db import models
 from django.db.models.signals import pre_save
 
+from bookelu_project import settings
 from bookelu_project.utils import unique_shop_id_generator
 
+User = settings.AUTH_USER_MODEL
 
 def get_file_ext(filepath):
     base_name = os.path.basename(filepath)
@@ -83,10 +85,10 @@ BUSINESS_TYPE_CHOICES = (
 
 )
 class Shop(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='shop_user')
     shop_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     shop_name = models.CharField(max_length=255, blank=True, null=True)
-    shop_password = models.CharField(max_length=255, blank=True, null=True)
 
     business_type = models.CharField(max_length=255, choices=BUSINESS_TYPE_CHOICES, blank=True, null=True)
     country = models.CharField(max_length=255, blank=True, null=True)

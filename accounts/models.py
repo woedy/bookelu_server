@@ -62,6 +62,7 @@ USER_TYPE = (
     ('Client', 'Client'),
     ('Saloon Staff', 'Saloon Staff'),
     ('Admin', 'Admin'),
+('Shop', 'Shop'),
 
 )
 

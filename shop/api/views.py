@@ -1,12 +1,25 @@
+import re
+from celery import chain
+
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model, authenticate
+from django.template.loader import get_template
+from bookelu_project.tasks import send_generic_email
 
+from accounts.api.serializers import UserRegistrationSerializer
+from activities.models import AllActivity
+from bookelu_project import settings
+from bookelu_project.utils import generate_email_token
 from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
+from rest_framework.authtoken.models import Token
+
+User = get_user_model()
 
 
 # Create your views here.
@@ -20,7 +33,7 @@ def add_shop_view(request):
 
 
 
-    shop_name = request.data.get('shop_name', '')
+    full_name = request.data.get('full_name', '')
     contact = request.data.get('contact', '')
     email = request.data.get('email', '')
     country = request.data.get('country', '')
@@ -34,21 +47,53 @@ def add_shop_view(request):
     location_lng = request.data.get('location_lng', '')
     business_type = request.data.get('business_type', '')
     business_logo = request.data.get('business_logo', '')
-    password1 = request.data.get('password1', '')
+    password = request.data.get('password', '')
     password2 = request.data.get('password2', '')
 
-    if not shop_name:
-        errors['shop_name'] = ["Shop name required"]
+    if not email:
+        errors['email'] = ['User Email is required.']
+    elif not is_valid_email(email):
+        errors['email'] = ['Valid email required.']
+    elif check_email_exist(email):
+        errors['email'] = ['Email already exists in our database.']
+
+    if not full_name:
+        errors['full_name'] = ['Shop full name is required.']
+
+    if not contact:
+        errors['contact'] = ['Contact number is required.']
+
+    if not password:
+        errors['password'] = ['Password is required.']
+
+    if not password2:
+        errors['password2'] = ['Password2 is required.']
+
+    if password != password2:
+        errors['password'] = ['Passwords dont match.']
+
+    if not is_valid_password(password):
+        errors['password'] = [
+            'Password must be at least 8 characters long\n- Must include at least one uppercase letter,\n- One lowercase letter, one digit,\n- And one special character']
+
 
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    serializer = UserRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        data["user_id"] = user.user_id
+        data["email"] = user.email
+        data["shop_name"] = user.full_name
+
 
     new_shop = Shop.objects.create(
+        user=user,
         email=email,
-        shop_name=shop_name,
+        shop_name=full_name,
         phone=contact,
         country=country,
         street_address1=street_address1,
@@ -61,9 +106,47 @@ def add_shop_view(request):
         lng=location_lng,
         business_type=business_type,
         photo=business_logo,
-        shop_password=password1,
 
     )
+
+    token = Token.objects.get(user=user).key
+    data['token'] = token
+
+    data['shop_id'] = new_shop.shop_id
+
+    email_token = generate_email_token()
+
+    user = User.objects.get(email=email)
+    user.email_token = email_token
+    user.save()
+
+    context = {
+        'email_token': email_token,
+        'email': user.email,
+        'full_name': user.full_name
+    }
+
+    txt_ = get_template("registration/emails/verify.html").render(context)
+    html_ = get_template("registration/emails/verify.txt").render(context)
+
+    subject = 'EMAIL CONFIRMATION CODE'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [user.email]
+
+    # Use Celery chain to execute tasks in sequence
+    email_chain = chain(
+        send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+    )
+    # Execute the Celery chain asynchronously
+    email_chain.apply_async()
+
+    #
+    new_activity = AllActivity.objects.create(
+        user=user,
+        subject="Shop Registration",
+        body=user.email + " Just created an account."
+    )
+    new_activity.save()
 
     payload['message'] = "Successful"
     payload['data'] = data
@@ -73,8 +156,8 @@ def add_shop_view(request):
 
 
 @api_view(['POST', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def setup_shop_view(request):
     payload = {}
     data = {}
@@ -140,8 +223,8 @@ def setup_shop_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def setup_services_view(request):
     payload = {}
     data = {}
@@ -180,8 +263,8 @@ def setup_services_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def setup_staff_view(request):
     payload = {}
     data = {}
@@ -220,8 +303,8 @@ def setup_staff_view(request):
 
 
 @api_view(['POST', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def add_package_view(request):
     payload = {}
     data = {}
@@ -248,6 +331,7 @@ def add_package_view(request):
             shop=shop,
             package_name=package['package_name'],
             price=package['price'],
+            photo=package['photo'],
 
         )
 
@@ -260,8 +344,8 @@ def add_package_view(request):
 
 
 @api_view(['GET', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def list_all_shops_view(request):
     payload = {}
     data = {}
@@ -289,8 +373,8 @@ def list_all_shops_view(request):
 
 
 @api_view(['GET', ])
-@permission_classes([])
-@authentication_classes([ ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
 def shop_details_view(request):
     payload = {}
     data = {}
@@ -383,4 +467,53 @@ def add_shop_view2222(request):
 
 
     return Response(payload, status=status.HTTP_200_OK)
+
+
+
+
+
+
+
+def check_email_exist(email):
+
+    qs = User.objects.filter(email=email)
+    if qs.exists():
+        return True
+    else:
+        return False
+
+
+def is_valid_email(email):
+    # Regular expression pattern for basic email validation
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+
+    # Using re.match to check if the email matches the pattern
+    if re.match(pattern, email):
+        return True
+    else:
+        return False
+
+
+def is_valid_password(password):
+    # Check for at least 8 characters
+    if len(password) < 8:
+        return False
+
+    # Check for at least one uppercase letter
+    if not re.search(r'[A-Z]', password):
+        return False
+
+    # Check for at least one lowercase letter
+    if not re.search(r'[a-z]', password):
+        return False
+
+    # Check for at least one digit
+    if not re.search(r'[0-9]', password):
+        return False
+
+    # Check for at least one special character
+    if not re.search(r'[-!@#\$%^&*_()-+=/.,<>?"~`£{}|:;]', password):
+        return False
+
+    return True
 
