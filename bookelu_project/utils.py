@@ -56,3 +56,41 @@ def generate_email_token():
     return code
 
 
+
+
+def unique_service_id_generator(instance):
+    """
+    This is for a service_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(5, 7)
+    service_id = "BK-" + random_string_generator(size=size, chars=string.ascii_uppercase + string.digits) + "-(S)"
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(service_id=service_id).exists()
+    if qs_exists:
+        return None
+    return service_id
+
+
+
+def unique_booking_id_generator(instance):
+    """
+    This is for a booking_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(5, 7)
+    booking_id = "BK-" + random_string_generator(size=size, chars=string.ascii_uppercase + string.digits) + "-(AP)"
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(booking_id=booking_id).exists()
+    if qs_exists:
+        return None
+    return booking_id
+
+
+
+
+

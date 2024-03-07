@@ -89,6 +89,9 @@ def add_shop_view(request):
         data["email"] = user.email
         data["shop_name"] = user.full_name
 
+        user.user_type = "Shop"
+        user.save()
+
 
     new_shop = Shop.objects.create(
         user=user,
@@ -179,6 +182,14 @@ def setup_shop_view(request):
     if not description:
         errors['description'] = ["Description required"]
 
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
@@ -238,6 +249,14 @@ def setup_services_view(request):
     if not services:
         errors['services'] = ["Services required"]
 
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
@@ -278,6 +297,14 @@ def setup_staff_view(request):
     if not staffs:
         errors['staffs'] = ["Staffs required"]
 
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
@@ -317,6 +344,14 @@ def add_package_view(request):
 
     if not packages:
         errors['packages'] = ["Add at least one package required"]
+
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
 
     if errors:
         payload['message'] = "Errors"
@@ -387,6 +422,11 @@ def shop_details_view(request):
     if not shop_id:
         errors['shop_id'] = ["Shop id required"]
 
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
@@ -405,68 +445,6 @@ def shop_details_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
-
-
-
-@api_view(['POST', ])
-@permission_classes([IsAuthenticated, ])
-@authentication_classes([TokenAuthentication, ])
-def add_shop_view2222(request):
-    payload = {}
-    data = {}
-    errors = {}
-
-
-
-    shop_name = request.data.get('shop_name', '')
-    contact = request.data.get('contact', '')
-    email = request.data.get('email', '')
-    country = request.data.get('country', '')
-    street_address1 = request.data.get('street_address1', '')
-    street_address2 = request.data.get('street_address2', '')
-    city = request.data.get('city', '')
-    state = request.data.get('state', '')
-    zipcode = request.data.get('zipcode', '')
-    location_name = request.data.get('location_name', '')
-    location_lat = request.data.get('location_lat', '')
-    location_lng = request.data.get('location_lng', '')
-    business_type = request.data.get('business_type', '')
-    business_logo = request.data.get('business_logo', '')
-    password1 = request.data.get('password1', '')
-    password2 = request.data.get('password2', '')
-
-    if not shop_name:
-        errors['shop_name'] = ["Shop name required"]
-
-    if errors:
-        payload['message'] = "Errors"
-        payload['errors'] = errors
-        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
-
-
-    new_shop = Shop.objects.create(
-        email=email,
-        phone=contact,
-        country=country,
-        street_address1=street_address1,
-        street_address2=street_address2,
-        city=city,
-        state=state,
-        zipcode=zipcode,
-        location_name=location_name,
-        location_lat=location_lat,
-        location_lng=location_lng,
-        business_type=business_type,
-        business_logo=business_logo,
-        shop_password=password1,
-
-    )
-
-    payload['message'] = "Successful"
-    payload['data'] = data
-
-
-    return Response(payload, status=status.HTTP_200_OK)
 
 
 

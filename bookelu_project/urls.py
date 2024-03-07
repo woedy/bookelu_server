@@ -24,6 +24,9 @@ urlpatterns = [
     path('api/accounts/', include('accounts.api.urls', 'accounts_api')),
     path('api/shop/', include('shop.api.urls', 'shop_api')),
     path('api/user-profile/', include('user_profile.api.urls', 'user_profile_api')),
+    path('api/homepage/', include('homepage.api.urls', 'homepage_api')),
+    path('api/bookings/', include('bookings.api.urls', 'bookings_api')),
+    path('api/admin-app/', include('admin_app.api.urls', 'admin_app_api')),
 
 ]
 

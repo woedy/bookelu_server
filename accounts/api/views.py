@@ -83,6 +83,9 @@ def register_user(request):
             data["email"] = user.email
             data["full_name"] = user.full_name
 
+            user.user_type = "Client"
+            user.save()
+
             user_profile = UserProfile.objects.create(
                 user=user,
                 phone=phone,
