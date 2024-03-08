@@ -15,6 +15,7 @@ from accounts.api.serializers import UserRegistrationSerializer
 from activities.models import AllActivity
 from bookelu_project import settings
 from bookelu_project.utils import generate_email_token
+from payments.models import PaymentSetup
 from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
 from rest_framework.authtoken.models import Token
@@ -280,6 +281,53 @@ def setup_services_view(request):
 
 
     return Response(payload, status=status.HTTP_200_OK)
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def setup_payment_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+
+
+    shop_id = request.data.get('shop_id', '')
+    platform = request.data.get('platform', '')
+    public_api_key = request.data.get('public_api_key', '')
+
+    if not platform:
+        errors['platform'] = ["Platform required"]
+
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+    shop = Shop.objects.get(shop_id=shop_id)
+
+    new_payment_setup = PaymentSetup.objects.create(
+        shop=shop,
+        platform=platform,
+        public_api_key=public_api_key
+    )
+
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+
+    return Response(payload, status=status.HTTP_200_OK)
+
 
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
