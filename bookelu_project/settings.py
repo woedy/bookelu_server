@@ -25,7 +25,8 @@ SECRET_KEY = "django-insecure-=i@!9%gg4o^_)-b&o*br1pip8!%-_!8=yqf*1iq(_l(*+y_k$b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["143.42.21.193", "127.0.0.1", "0.0.0.0", "localhost", "192.168.43.235", "192.168.43.223"]
+#ALLOWED_HOSTS = ["143.42.21.193", "127.0.0.1", "0.0.0.0", "localhost", "192.168.43.235", "192.168.43.223"]
+ALLOWED_HOSTS = ["*"]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'box.teamalfy.co.uk'
@@ -46,6 +47,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    'channels',
+
     'corsheaders',
 
     'rest_framework',
@@ -59,6 +62,7 @@ INSTALLED_APPS = [
     'homepage',
     'bookings',
     'admin_app',
+    'chats',
 
 ]
 
@@ -69,13 +73,11 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-
-    'django.middleware.common.CommonMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = "bookelu_project.urls"
@@ -121,7 +123,7 @@ DATABASES = {
 #         'PORT': 5432,
 #      }
 # }
-#
+
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
@@ -191,11 +193,21 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("127.0.0.1", 6379)],
+#         },
+#     },
+# }
+
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("redis", 6379)],
         },
     },
 }

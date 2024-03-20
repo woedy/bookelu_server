@@ -1,7 +1,7 @@
 from django.urls import path
 
 from accounts.api.views import register_user, verify_user_email, resend_email_verification, UserLogin, \
-    PasswordResetView, confirm_otp_password_view, resend_password_otp, new_password_reset_view
+    PasswordResetView, confirm_otp_password_view, resend_password_otp, new_password_reset_view, remove_user_view
 
 app_name = 'accounts'
 
@@ -15,5 +15,7 @@ urlpatterns = [
     path('confirm-password-otp/', confirm_otp_password_view, name="confirm_otp_password"),
     path('resend-password-otp/', resend_password_otp, name="resend_password_otp"),
     path('new-password-reset/', new_password_reset_view, name="new_password_reset_view"),
+
+    path('remove_user/', remove_user_view, name="remove_user_view"),
 
 ]

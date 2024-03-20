@@ -33,6 +33,9 @@ def unique_user_id_generator(instance):
     return user_id
 
 
+
+
+
 def unique_shop_id_generator(instance):
     """
     This is for a django project with a shop_id field
@@ -89,6 +92,37 @@ def unique_booking_id_generator(instance):
     if qs_exists:
         return None
     return booking_id
+
+def unique_room_id_generator(instance):
+    """
+    This is for a room_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(30, 45)
+    room_id = random_string_generator(size=size)
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(room_id=room_id).exists()
+    if qs_exists:
+        return None
+    return room_id
+
+
+def unique_staff_id_generator(instance):
+    """
+    This is for a staff_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(5, 7)
+    staff_id = "STF-" + random_string_generator(size=size, chars=string.ascii_uppercase + string.digits) + "-(S)"
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(staff_id=staff_id).exists()
+    if qs_exists:
+        return None
+    return staff_id
 
 
 

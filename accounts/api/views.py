@@ -1,4 +1,5 @@
 import re
+from django.core.mail import EmailMessage, send_mail
 
 from celery import chain
 from django.conf import settings
@@ -123,12 +124,21 @@ def register_user(request):
 
 
 
-        # Use Celery chain to execute tasks in sequence
-        email_chain = chain(
-            send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+        # # Use Celery chain to execute tasks in sequence
+        # email_chain = chain(
+        #     send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+        # )
+        # # Execute the Celery chain asynchronously
+        # email_chain.apply_async()
+
+        send_mail(
+            subject,
+            txt_,
+            from_email,
+            recipient_list,
+            html_message=html_,
+            fail_silently=False,
         )
-        # Execute the Celery chain asynchronously
-        email_chain.apply_async()
 
 
 
@@ -137,6 +147,48 @@ def register_user(request):
             user=user,
             subject="User Registration",
             body=user.email + " Just created an account."
+        )
+        new_activity.save()
+
+        payload['message'] = "Successful"
+        payload['data'] = data
+
+    return Response(payload)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def remove_user_view(request):
+
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        user_id = request.data.get('user_id', "")
+
+
+        if not user_id:
+            errors['user_id'] = ['User ID is required.']
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except:
+            errors['user_id'] = ['User does not exist.']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_deleted = True
+        user.save()
+
+        new_activity = AllActivity.objects.create(
+            user=user,
+            subject="User Removed",
+            body=user.email + " Just deleted their account."
         )
         new_activity.save()
 
@@ -269,12 +321,21 @@ def resend_email_verification(request):
     from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [user.email]
 
-    # Use Celery chain to execute tasks in sequence
-    email_chain = chain(
-        send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
-     )
-    # Execute the Celery chain asynchronously
-    email_chain.apply_async()
+    # # Use Celery chain to execute tasks in sequence
+    # email_chain = chain(
+    #     send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+    #  )
+    # # Execute the Celery chain asynchronously
+    # email_chain.apply_async()
+
+    send_mail(
+        subject,
+        txt_,
+        from_email,
+        recipient_list,
+        html_message=html_,
+        fail_silently=False,
+    )
 
     data["otp_code"] = otp_code
     data["emai"] = user.email
@@ -443,12 +504,21 @@ class PasswordResetView(generics.GenericAPIView):
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [user.email]
 
-        # Use Celery chain to execute tasks in sequence
-        email_chain = chain(
-            send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
-         )
-        # Execute the Celery chain asynchronously
-        email_chain.apply_async()
+        # # Use Celery chain to execute tasks in sequence
+        # email_chain = chain(
+        #     send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+        #  )
+        # # Execute the Celery chain asynchronously
+        # email_chain.apply_async()
+
+        send_mail(
+            subject,
+            txt_,
+            from_email,
+            recipient_list,
+            html_message=html_,
+            fail_silently=False,
+        )
 
         data["otp_code"] = otp_code
         data["email"] = user.email
@@ -561,12 +631,21 @@ def resend_password_otp(request):
     from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [user.email]
 
-    # Use Celery chain to execute tasks in sequence
-    email_chain = chain(
-        send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
-     )
-    # Execute the Celery chain asynchronously
-    email_chain.apply_async()
+    # # Use Celery chain to execute tasks in sequence
+    # email_chain = chain(
+    #     send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+    #  )
+    # # Execute the Celery chain asynchronously
+    # email_chain.apply_async()
+
+    send_mail(
+        subject,
+        txt_,
+        from_email,
+        recipient_list,
+        html_message=html_,
+        fail_silently=False,
+    )
 
     data["otp_code"] = otp_code
     data["emai"] = user.email

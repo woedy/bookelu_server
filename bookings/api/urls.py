@@ -1,10 +1,21 @@
 from django.urls import path
 
-from bookings.api.views import shop_bookings_view, shop_booking_detail_view
+from bookings.api.views import shop_bookings_view, shop_booking_detail_view, book_appointment_view, \
+    client_bookings_view, reschedule_appointment_view, cancel_appointment_view, make_payment_view, booking_ratings, \
+    add_split_view, walkin_booking_view
 
 app_name = 'bookings'
 
 urlpatterns = [
     path('shop-bookings/', shop_bookings_view, name="shop_bookings_view"),
     path('shop-booking-detail/', shop_booking_detail_view, name="shop_booking_detail_view"),
+
+    path('book-appointment/', book_appointment_view, name="book_appointment_view"),
+    path('walkin-booking/', walkin_booking_view, name="walkin_booking_view"),
+    path('add-split/', add_split_view, name="add_split_view"),
+    path('client-bookings/', client_bookings_view, name="client_bookings_view"),
+    path('reschedule-appointment/', reschedule_appointment_view, name="reschedule_appointment_view"),
+    path('cancel-appointment/', cancel_appointment_view, name="cancel_appointment_view"),
+    path('make-payment/', make_payment_view, name="make_payment_view"),
+    path('rate-booking/', booking_ratings, name="booking_ratings"),
 ]

@@ -1,16 +1,33 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from bookings.models import Booking
+from bookings.models import Booking, BookingPayment
+from shop.models import ShopService
+from user_profile.models import UserProfile
 
 User = get_user_model()
 
+class BookingPaymentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookingPayment
+        fields = [
+            'id',
+            'payment_method',
+            'amount',
+        ]
+class BookingSeriveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopService
+        fields = [
+            'service_id',
+            'service_type',
+            'price',
+        ]
 class BookingUserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = UserProfile
         fields = [
             'photo',
-            'email',
             'phone',
         ]
 
@@ -28,6 +45,8 @@ class BookingUserSerializer(serializers.ModelSerializer):
 
 class BookingSerializer(serializers.ModelSerializer):
     client = BookingUserSerializer(many=False)
+    service = BookingSeriveSerializer(many=False)
+    booking_payments = BookingPaymentsSerializer(many=False)
     class Meta:
         model = Booking
         fields = [
@@ -44,7 +63,8 @@ class BookingSerializer(serializers.ModelSerializer):
             'booking_rescheduled_at',
 
             'split',
-            'booking_split_at',
+            'booking_split_from',
+            'booking_split_to',
 
             'amount_to_pay',
             'actual_price',
@@ -59,21 +79,25 @@ class BookingSerializer(serializers.ModelSerializer):
             'booking_approved_at',
             'booking_declined_at',
             'booking_cancelled_at',
+            'booking_payments'
         ]
 
 class ListBookingSerializer(serializers.ModelSerializer):
     client = BookingUserSerializer(many=False)
+    service = BookingSeriveSerializer(many=False)
+    booking_payments = BookingPaymentsSerializer(many=False)
     class Meta:
         model = Booking
         fields = [
             'booking_id',
             'client',
             'service_type',
+            'service',
 
             'booking_date',
             'booking_time',
+            'status',
 
-
-
+            'booking_payments'
 
         ]

@@ -3,7 +3,8 @@ from bookelu_project import settings
 from django.db.models.signals import pre_save
 
 from bookelu_project.utils import unique_booking_id_generator
-from shop.models import ShopService, Shop
+from chats.models import PrivateChatRoom
+from shop.models import ShopService, Shop, ShopStaff
 
 User = settings.AUTH_USER_MODEL
 
@@ -25,10 +26,13 @@ STATUS_CHOICE = (
 
 class Booking(models.Model):
     booking_id = models.CharField(max_length=200, null=True, blank=True)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_bookings')
-    service = models.ForeignKey(ShopService, on_delete=models.CASCADE, related_name='shop_service_bookings')
-    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shop_service_bookings')
+    room = models.ForeignKey(PrivateChatRoom, on_delete=models.SET_NULL, null=True, related_name='booking_chat_rooms')
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, null=True, related_name='shop_bookings')
+    service = models.ForeignKey(ShopService, on_delete=models.SET_NULL, null=True, related_name='shop_service_bookings')
+    booked_staff = models.ForeignKey(ShopStaff, on_delete=models.SET_NULL, null=True,related_name='booking_staffs')
+    client = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='shop_service_bookings')
     service_type = models.CharField(max_length=200,  null=True, blank=True)
+    home_service = models.BooleanField(default=False, blank=True, null=True)
 
     booking_date = models.DateField(auto_now=False, auto_now_add=False, null=True, blank=True)
     booking_time = models.TimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
@@ -36,11 +40,13 @@ class Booking(models.Model):
     re_scheduled = models.BooleanField(default=False)
     booking_rescheduled_at = models.DateTimeField(null=True, blank=True)
 
-    split = models.BooleanField(default=False)
-    booking_split_at = models.DateTimeField(null=True, blank=True)
+    split = models.BooleanField(default=False, blank=True, null=True)
+    booking_split_from = models.TimeField(null=True, blank=True)
+    booking_split_to = models.TimeField(null=True, blank=True)
 
     amount_to_pay = models.CharField(null=True, blank=True, max_length=100)
     actual_price = models.CharField(null=True, blank=True, max_length=100)
+    paid = models.BooleanField(default=False)
 
     actual_duration = models.CharField(null=True, blank=True, max_length=100)
 
@@ -81,3 +87,30 @@ class BookingPayment(models.Model):
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class BookingRating(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='booking_ratings')
+    rating = models.IntegerField(default=0)
+    report = models.TextField(null=True, blank=True)
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+
+class WalkInBooking(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='walk_in_bookings')
+    customer_name = models.CharField(max_length=200,  null=True, blank=True)
+    contact = models.CharField(max_length=200,  null=True, blank=True)
+    email = models.CharField(max_length=200,  null=True, blank=True)
+    country = models.CharField(max_length=200,  null=True, blank=True)
+    practitioner = models.CharField(max_length=200,  null=True, blank=True)
+
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+

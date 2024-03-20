@@ -1,0 +1,63 @@
+version: "3.8"
+services:
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: bookelu_redis
+
+  # Database Postgres
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=bookelu_postgres
+      - POSTGRES_USER=bookelu_postgres
+      - POSTGRES_PASSWORD=bookelu_postgres
+    container_name: bookelu_postgres_db
+
+  # Django Application
+  bookelu_app:
+    build: .
+    volumes:
+      - .:/bookelu_django
+      - ./static_cdn:/var/lib/static_cdn
+    ports:
+      - 4040:4040
+    image: bookelu_app:django
+    container_name: bookelu_django_app
+    command: python manage.py runserver 0.0.0.0:4040
+    depends_on:
+      - db 
+
+  # Celery Worker
+  celery:
+    restart: always
+    build:
+      context: .
+    command: celery -A bookelu_project worker -l DEBUG
+    volumes:
+      - .:/bookelu_django
+    container_name: bookelu_celery
+    depends_on:
+      - db
+      - redis
+      - bookelu_app
+
+  # Celery Beat
+  celery-beat:
+    restart: always
+    build:
+      context: .
+    command: celery -A bookelu_project beat -l DEBUG
+    volumes:
+      - .:/bookelu_django
+    container_name: bookelu_celery_beat
+    depends_on:
+      - db
+      - redis
+      - bookelu_app
+
+volumes:
+  static_cdn:

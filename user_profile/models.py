@@ -38,7 +38,6 @@ GENDER_CHOICES = (
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='personal_info')
-    #room = models.ForeignKey(PrivateChatRoom, on_delete=models.SET_NULL, null=True, blank=True, related_name="user_room")
     gender = models.CharField(max_length=100, choices=GENDER_CHOICES, blank=True, null=True)
     photo = models.ImageField(upload_to=upload_image_path, null=True, blank=True, default=get_default_profile_image)
     phone = models.CharField(max_length=255, null=True, blank=True)

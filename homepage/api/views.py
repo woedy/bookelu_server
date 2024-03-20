@@ -4,12 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth import get_user_model
 
 from bookings.api.serializers import BookingSerializer, ListBookingSerializer
 from bookings.models import Booking
 from shop.api.serializers import ShopServiceSerializer, ShopStaffSerializer
 from shop.models import Shop, ShopService, ShopStaff
 
+User = get_user_model()
 
 @api_view(['GET', ])
 @permission_classes([IsAuthenticated, ])
@@ -72,3 +74,60 @@ def shop_homepage_view(request):
     payload['data'] = data
 
     return Response(payload, status=status.HTTP_200_OK)
+
+
+
+
+
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def client_homepage_view(request):
+    payload = {}
+    data = {}
+    user_data = {}
+    errors = {}
+
+    shop_info = {}
+    bookings_today = []
+    shop_categories = []
+    shop_staffs = []
+
+
+    user_id = request.query_params.get('user_id', None)
+
+    if not user_id:
+        errors['user_id'] = ['User ID is required.']
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except:
+        errors['user_id'] = ['User does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+    _bookings = Booking.objects.filter(client=user).order_by('-created_at')
+    booking_serializer = ListBookingSerializer(_bookings, many=True)
+    if booking_serializer:
+        bookings_today = booking_serializer.data
+
+    data['bookings'] = bookings_today
+
+
+
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+
+
+

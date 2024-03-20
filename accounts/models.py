@@ -74,11 +74,7 @@ class User(AbstractBaseUser):
 
 
     user_type = models.CharField(max_length=100, choices=USER_TYPE, blank=True, null=True)
-
-
     fcm_token = models.TextField(blank=True, null=True)
-
-
 
     otp_code = models.CharField(max_length=10, blank=True, null=True)
 
@@ -87,6 +83,8 @@ class User(AbstractBaseUser):
 
     is_active = models.BooleanField(default=True)
     is_online = models.BooleanField(default=True)
+
+    is_deleted = models.BooleanField(default=False)
 
     staff = models.BooleanField(default=False)
     admin = models.BooleanField(default=False)

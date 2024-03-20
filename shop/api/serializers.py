@@ -21,6 +21,7 @@ class ShopServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopService
         fields = [
+            'id',
             'service_type',
         ]
 
@@ -50,6 +51,7 @@ class ShopStaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopStaff
         fields = [
+            'staff_id',
             'staff_name',
             'photo',
             'role',

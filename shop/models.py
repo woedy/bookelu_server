@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.signals import pre_save
 
 from bookelu_project import settings
-from bookelu_project.utils import unique_shop_id_generator, unique_service_id_generator
+from bookelu_project.utils import unique_shop_id_generator, unique_service_id_generator, unique_staff_id_generator
 
 User = settings.AUTH_USER_MODEL
 
@@ -96,6 +96,8 @@ class Shop(models.Model):
     description = models.TextField( null=True, blank=True)
 
 
+
+
     business_days = models.CharField(max_length=255, null=True, blank=True)
     business_hours_open = models.CharField(max_length=255, null=True, blank=True)
     business_hours_close = models.CharField(max_length=255, null=True, blank=True)
@@ -111,6 +113,14 @@ class Shop(models.Model):
 
     open = models.BooleanField(default=True)
 
+    shop_registered = models.BooleanField(default=False)
+    shop_setup = models.BooleanField(default=False)
+    service_setup = models.BooleanField(default=False)
+    payment_setup = models.BooleanField(default=False)
+    staff_setup = models.BooleanField(default=False)
+    registration_complete = models.BooleanField(default=False)
+
+
 
     street_address1 = models.CharField(max_length=255, null=True, blank=True)
     street_address2 = models.CharField(max_length=255, null=True, blank=True)
@@ -121,6 +131,8 @@ class Shop(models.Model):
     location_name = models.CharField(max_length=200, null=True, blank=True)
     lat = models.DecimalField(max_digits=30, decimal_places=15, null=True, blank=True)
     lng = models.DecimalField(max_digits=30, decimal_places=15, null=True, blank=True)
+
+    is_deleted = models.BooleanField(default=False)
 
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -182,6 +194,7 @@ pre_save.connect(pre_save_service_id_receiver, sender=ShopService)
 
 
 class ShopStaff(models.Model):
+    staff_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_staffs')
     staff_name = models.CharField(max_length=200,  null=True, blank=True)
     role = models.CharField(max_length=255, null=True, blank=True)
@@ -191,6 +204,15 @@ class ShopStaff(models.Model):
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+def pre_save_staff_id_receiver(sender, instance, *args, **kwargs):
+    if not instance.staff_id:
+        instance.staff_id = unique_staff_id_generator(instance)
+
+pre_save.connect(pre_save_staff_id_receiver, sender=ShopStaff)
+
+
 
 
 class ServiceSpecialist(models.Model):
@@ -204,4 +226,6 @@ class ShopPackage(models.Model):
     photo = models.ImageField(upload_to=upload_package_photo_path, null=True, blank=True)
     price = models.CharField(max_length=255, null=True, blank=True)
     rating = models.IntegerField(default=0, null=True, blank=True)
+
+
 
