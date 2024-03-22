@@ -3,7 +3,7 @@ from django.urls import path
 
 from shop.api.views import add_shop_view, setup_shop_view, setup_services_view, setup_staff_view, list_all_shops_view, \
     shop_details_view, add_package_view, setup_payment_view, get_staffs_view, remove_staff_view, admin_add_shop_view, \
-    check_shop_email_exists, setup_shop_exterior_view, setup_shop_interior_view, setup_shop_work_view
+    check_shop_email_exists, setup_shop_exterior_view, setup_shop_interior_view, setup_shop_work_view, get_services_view
 
 app_name = 'shop'
 
@@ -29,6 +29,7 @@ urlpatterns = [
     path('list-shops/', list_all_shops_view, name="list_all_shops_view"),
     path('shop-details/', shop_details_view, name="shop_details_view"),
     path('get-staffs/', get_staffs_view, name="get_staffs_view"),
+    path('get-services/', get_services_view, name="get_services_view"),
 
 
 ]

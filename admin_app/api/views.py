@@ -26,10 +26,10 @@ def overview_view(request):
     all_appointments_count = 0
     stats_data = {}
 
-    all_shops = Shop.objects.all()
+    all_shops = Shop.objects.all().filter(registration_complete=True).filter(is_deleted=False)
     vendors_count = all_shops.count()
 
-    all_users = User.objects.all().filter(user_type="Client")
+    all_users = User.objects.all().filter(user_type="Client").filter(is_deleted=False)
     all_users_count = all_users.count()
 
     all_bookings = Booking.objects.all()
@@ -73,7 +73,7 @@ def list_all_shops_admin_view(request):
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
-    shops = Shop.objects.all().filter(registration_complete=True)
+    shops = Shop.objects.all().filter(registration_complete=True).filter(is_deleted=False)
 
     shops_serializer = ListAdminShopsSerializer(shops, many=True)
     if shops_serializer:

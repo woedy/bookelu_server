@@ -16,7 +16,7 @@ from activities.models import AllActivity
 from bookelu_project import settings
 from bookelu_project.utils import generate_email_token
 from payments.models import PaymentSetup
-from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer
+from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer, ShopServiceSerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
 from rest_framework.authtoken.models import Token
 from django.core.mail import EmailMessage, send_mail
@@ -75,6 +75,7 @@ def admin_add_shop_view(request):
     location_lng = request.data.get('location_lng', '')
     business_type = request.data.get('business_type', '')
     business_logo = request.data.get('business_logo', '')
+
     password = request.data.get('password', 'Bookelu123!_')
     password2 = request.data.get('password2', 'Bookelu123!_')
 
@@ -90,19 +91,6 @@ def admin_add_shop_view(request):
 
     if not contact:
         errors['contact'] = ['Contact number is required.']
-
-    if not password:
-        errors['password'] = ['Password is required.']
-
-    if not password2:
-        errors['password2'] = ['Password2 is required.']
-
-    if password != password2:
-        errors['password'] = ['Passwords dont match.']
-
-    if not is_valid_password(password):
-        errors['password'] = [
-            'Password must be at least 8 characters long\n- Must include at least one uppercase letter,\n- One lowercase letter, one digit,\n- And one special character']
 
     if errors:
         payload['message'] = "Errors"
@@ -1052,6 +1040,40 @@ def get_staffs_view(request):
 
     payload['message'] = "Successful"
     payload['data'] = staffs
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def get_services_view(request):
+    payload = {}
+    data = {}
+    user_data = {}
+    errors = {}
+
+    shop_id = request.query_params.get('shop_id', None)
+
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    _services = ShopService.objects.filter(shop=shop).order_by('-created_at')
+    services_serializer = ShopServiceSerializer(_services, many=True)
+    if services_serializer:
+        services = services_serializer.data
+
+    payload['message'] = "Successful"
+    payload['data'] = services
 
     return Response(payload, status=status.HTTP_200_OK)
 
