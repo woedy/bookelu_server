@@ -16,7 +16,8 @@ from activities.models import AllActivity
 from bookelu_project import settings
 from bookelu_project.utils import generate_email_token
 from payments.models import PaymentSetup
-from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer, ShopServiceSerializer
+from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer, ShopServiceSerializer, \
+    ShopServiceDetailSerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
 from rest_framework.authtoken.models import Token
 from django.core.mail import EmailMessage, send_mail
@@ -853,6 +854,38 @@ def remove_staff_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def remove_service_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    service_id = request.data.get('service_id', '')
+
+    if not service_id:
+        errors['service_id'] = ['Service ID is required.']
+
+    try:
+        service = ShopService.objects.get(service_id=service_id)
+    except:
+        errors['service_id'] = ['Service does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    service.delete()
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
 @authentication_classes([TokenAuthentication, ])
@@ -1068,7 +1101,7 @@ def get_services_view(request):
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     _services = ShopService.objects.filter(shop=shop).order_by('-created_at')
-    services_serializer = ShopServiceSerializer(_services, many=True)
+    services_serializer = ShopServiceDetailSerializer(_services, many=True)
     if services_serializer:
         services = services_serializer.data
 

@@ -16,6 +16,16 @@ class ShopPackageSerializer(serializers.ModelSerializer):
             'photo'
         ]
 
+class ShopServiceDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopService
+        fields = [
+            'service_id',
+            'service_type',
+            'price',
+            'duration',
+            'description',
+        ]
 
 class ShopServiceSerializer(serializers.ModelSerializer):
     class Meta:
