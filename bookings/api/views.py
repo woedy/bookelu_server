@@ -152,7 +152,7 @@ def book_appointment_view(request):
         errors['staff_id'] = ['Staff does not exist.']
 
     try:
-        shop_service = ShopService.objects.get(id=service_id)
+        shop_service = ShopService.objects.get(service_id=service_id)
     except:
         errors['service_id'] = ['Service does not exist.']
 
