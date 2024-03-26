@@ -31,7 +31,7 @@ class ShopServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopService
         fields = [
-            'id',
+            'service_id',
             'service_type',
         ]
 
