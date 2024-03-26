@@ -18,6 +18,7 @@ from accounts.api.serializers import UserRegistrationSerializer, PasswordResetSe
 from activities.models import AllActivity
 from bookelu_project.utils import generate_email_token, generate_random_otp_code
 from bookelu_project.tasks import send_generic_email
+from shop.models import Shop
 from user_profile.models import UserProfile
 
 User = get_user_model()
@@ -438,6 +439,90 @@ class UserLogin(APIView):
         new_activity = AllActivity.objects.create(
             user=user,
             subject="User Login",
+            body=user.email + " Just logged in."
+        )
+        new_activity.save()
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+class ShopLogin(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        payload = {}
+        data = {}
+        errors = {}
+
+
+        email = request.data.get('email', '').lower()
+        password = request.data.get('password', '')
+        fcm_token = request.data.get('fcm_token', '')
+
+        if not email:
+            errors['email'] = ['Email is required.']
+
+        if not password:
+            errors['password'] = ['Password is required.']
+
+        if not fcm_token:
+            errors['fcm_token'] = ['FCM device token is required.']
+
+        try:
+            qs = User.objects.filter(email=email)
+        except User.DoesNotExist:
+            errors['email'] = ['User does not exist.']
+
+
+
+        if qs.exists():
+            not_active = qs.filter(email_verified=False)
+            if not_active:
+                errors['email'] = ["Please check your email to confirm your account or resend confirmation email."]
+
+        if not check_password(email, password):
+            errors['password'] = ['Invalid Credentials']
+
+        user = authenticate(email=email, password=password)
+
+
+        if not user:
+            errors['email'] = ['Invalid Credentials']
+
+
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+        try:
+            token = Token.objects.get(user=user)
+        except Token.DoesNotExist:
+            token = Token.objects.create(user=user)
+
+        try:
+            shop = Shop.objects.get(user=user)
+        except :
+            errors['email'] = ['Shop does not exist']
+
+
+        user.fcm_token = fcm_token
+        user.save()
+
+        data["user_id"] = user.user_id
+        data["email"] = user.email
+        data["full_name"] = user.full_name
+        data["shop_id"] = shop.shop_id
+        data["token"] = token.key
+
+        payload['message'] = "Successful"
+        payload['data'] = data
+
+        new_activity = AllActivity.objects.create(
+            user=user,
+            subject="Shop Login",
             body=user.email + " Just logged in."
         )
         new_activity.save()
