@@ -1,3 +1,4 @@
+import math
 import re
 from celery import chain
 
@@ -21,6 +22,8 @@ from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, Shop
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
 from rest_framework.authtoken.models import Token
 from django.core.mail import EmailMessage, send_mail
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -989,17 +992,33 @@ def list_all_shops_view(request):
     data = {}
     errors = {}
 
-    if errors:
-        payload['message'] = "Errors"
-        payload['errors'] = errors
-        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+    search_query = request.query_params.get('search', '')
+    page_number = request.query_params.get('page', 1)
+    page_size = 10
 
-    shops = Shop.objects.all().filter(registration_complete=True)
+    shops = Shop.objects.filter(registration_complete=True)
 
-    shops_serializer = ListShopsSerializer(shops, many=True)
-    if shops_serializer:
-        _shops = shops_serializer.data
-        data['shops'] = _shops
+    if search_query:
+        shops = shops.filter(shop_name__icontains=search_query)
+
+    paginator = Paginator(shops, page_size)
+
+    try:
+        paginated_shops = paginator.page(page_number)
+    except PageNotAnInteger:
+        paginated_shops = paginator.page(1)
+    except EmptyPage:
+        paginated_shops = paginator.page(paginator.num_pages)
+
+    shops_serializer = ListShopsSerializer(paginated_shops, many=True)
+
+    data['shops'] = shops_serializer.data
+    data['pagination'] = {
+        'page_number': paginated_shops.number,
+        'total_pages': paginator.num_pages,
+        'next': paginated_shops.next_page_number() if paginated_shops.has_next() else None,
+        'previous': paginated_shops.previous_page_number() if paginated_shops.has_previous() else None,
+    }
 
     payload['message'] = "Successful"
     payload['data'] = data
@@ -1042,13 +1061,13 @@ def shop_details_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 
+
 @api_view(['GET', ])
 @permission_classes([IsAuthenticated, ])
 @authentication_classes([TokenAuthentication, ])
 def get_staffs_view(request):
     payload = {}
     data = {}
-    user_data = {}
     errors = {}
 
     shop_id = request.query_params.get('shop_id', None)
@@ -1066,15 +1085,41 @@ def get_staffs_view(request):
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
-    _staffs = ShopStaff.objects.filter(shop=shop).order_by('-created_at')
-    staffs_serializer = ShopStaffSerializer(_staffs, many=True)
-    if staffs_serializer:
-        staffs = staffs_serializer.data
+    search_query = request.query_params.get('search', '')
+    page_number = request.query_params.get('page', 1)
+    page_size = 10
+
+    staffs = ShopStaff.objects.filter(shop=shop).order_by('-created_at')
+
+    if search_query:
+        staffs = staffs.filter(Q(staff_name__icontains=search_query) | Q(staff_id__icontains=search_query))
+
+    paginator = Paginator(staffs, page_size)
+
+    try:
+        paginated_staffs = paginator.page(page_number)
+    except PageNotAnInteger:
+        paginated_staffs = paginator.page(1)
+    except EmptyPage:
+        paginated_staffs = paginator.page(paginator.num_pages)
+
+    staffs_serializer = ShopStaffSerializer(paginated_staffs, many=True)
+
+    data['staffs'] = staffs_serializer.data
+    data['pagination'] = {
+        'page_number': paginated_staffs.number,
+        'total_pages': paginator.num_pages,
+        'next': paginated_staffs.next_page_number() if paginated_staffs.has_next() else None,
+        'previous': paginated_staffs.previous_page_number() if paginated_staffs.has_previous() else None,
+    }
 
     payload['message'] = "Successful"
-    payload['data'] = staffs
+    payload['data'] = data
 
     return Response(payload, status=status.HTTP_200_OK)
+
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 
 @api_view(['GET', ])
 @permission_classes([IsAuthenticated, ])
@@ -1082,7 +1127,6 @@ def get_staffs_view(request):
 def get_services_view(request):
     payload = {}
     data = {}
-    user_data = {}
     errors = {}
 
     shop_id = request.query_params.get('shop_id', None)
@@ -1100,16 +1144,41 @@ def get_services_view(request):
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
-    _services = ShopService.objects.filter(shop=shop).order_by('-created_at')
-    services_serializer = ShopServiceDetailSerializer(_services, many=True)
-    if services_serializer:
-        services = services_serializer.data
+    search_query = request.query_params.get('search', '')
+    page_number = request.query_params.get('page', 1)
+    page_size = 10
+
+    services = ShopService.objects.filter(shop=shop).order_by('-created_at')
+
+    if search_query:
+        services = services.filter(
+            Q(service_id__icontains=search_query) |
+            Q(service_type__icontains=search_query)
+        )
+
+    paginator = Paginator(services, page_size)
+
+    try:
+        paginated_services = paginator.page(page_number)
+    except PageNotAnInteger:
+        paginated_services = paginator.page(1)
+    except EmptyPage:
+        paginated_services = paginator.page(paginator.num_pages)
+
+    services_serializer = ShopServiceDetailSerializer(paginated_services, many=True)
+
+    data['services'] = services_serializer.data
+    data['pagination'] = {
+        'page_number': paginated_services.number,
+        'total_pages': paginator.num_pages,
+        'next': paginated_services.next_page_number() if paginated_services.has_next() else None,
+        'previous': paginated_services.previous_page_number() if paginated_services.has_previous() else None,
+    }
 
     payload['message'] = "Successful"
-    payload['data'] = services
+    payload['data'] = data
 
     return Response(payload, status=status.HTTP_200_OK)
-
 
 @api_view(['POST', ])
 @permission_classes([])

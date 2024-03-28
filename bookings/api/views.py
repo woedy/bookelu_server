@@ -9,6 +9,7 @@ from bookings.api.serializers import ListBookingSerializer, BookingSerializer
 from bookings.models import Booking, BookingPayment, BookingRating, WalkInBooking
 from chats.models import PrivateChatRoom
 from shop.models import Shop, ShopService, ShopStaff
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 User = get_user_model()
 
@@ -18,11 +19,7 @@ User = get_user_model()
 def shop_bookings_view(request):
     payload = {}
     data = {}
-    user_data = {}
     errors = {}
-
-    bookings = []
-
 
     shop_id = request.query_params.get('shop_id', None)
 
@@ -39,24 +36,38 @@ def shop_bookings_view(request):
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    search_query = request.query_params.get('search', '')
+    page_number = request.query_params.get('page', 1)
+    page_size = 10
 
+    bookings = Booking.objects.filter(shop=shop).order_by('-created_at')
 
+    if search_query:
+        bookings = bookings.filter(booking_id__icontains=search_query)
 
-    _bookings = Booking.objects.filter(shop=shop).order_by('-created_at')
-    booking_serializer = ListBookingSerializer(_bookings, many=True)
-    if booking_serializer:
-        bookings = booking_serializer.data
+    paginator = Paginator(bookings, page_size)
 
-    data['bookings'] = bookings
+    try:
+        paginated_bookings = paginator.page(page_number)
+    except PageNotAnInteger:
+        paginated_bookings = paginator.page(1)
+    except EmptyPage:
+        paginated_bookings = paginator.page(paginator.num_pages)
 
+    booking_serializer = ListBookingSerializer(paginated_bookings, many=True)
 
-
+    data['bookings'] = booking_serializer.data
+    data['pagination'] = {
+        'page_number': paginated_bookings.number,
+        'total_pages': paginator.num_pages,
+        'next': paginated_bookings.next_page_number() if paginated_bookings.has_next() else None,
+        'previous': paginated_bookings.previous_page_number() if paginated_bookings.has_previous() else None,
+    }
 
     payload['message'] = "Successful"
     payload['data'] = data
 
     return Response(payload, status=status.HTTP_200_OK)
-
 
 @api_view(['GET', ])
 @permission_classes([IsAuthenticated, ])
