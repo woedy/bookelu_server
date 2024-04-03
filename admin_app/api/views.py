@@ -396,7 +396,7 @@ def remove_booking_view(request):
         booking.delete()
 
         new_activity = AllActivity.objects.create(
-            user=1,
+            user=User.objects.get(id=1),
             subject="Booking Removed",
             body="Admin Just deleted booking. "
         )
