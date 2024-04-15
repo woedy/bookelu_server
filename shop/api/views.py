@@ -12,14 +12,15 @@ from django.contrib.auth import get_user_model, authenticate
 from django.template.loader import get_template
 from bookelu_project.tasks import send_generic_email
 
-from accounts.api.serializers import UserRegistrationSerializer
+from accounts.api.serializers import UserRegistrationSerializer, StaffRegistrationSerializer
 from activities.models import AllActivity
 from bookelu_project import settings
 from bookelu_project.utils import generate_email_token
 from payments.models import PaymentSetup
 from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer, ShopServiceSerializer, \
-    ShopServiceDetailSerializer
-from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage
+    ShopServiceDetailSerializer, ShopPackageSerializer
+from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage, \
+    ServiceSpecialist
 from rest_framework.authtoken.models import Token
 from django.core.mail import EmailMessage, send_mail
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -691,15 +692,23 @@ def setup_staff_view(request):
     errors = {}
 
     shop_id = request.data.get('shop_id', '')
-    staff_name = request.data.get('staff_name', '')
+    full_name = request.data.get('full_name', '')
+    email = request.data.get('email', '')
     role = request.data.get('role', '')
     photo = request.data.get('photo', '')
 
     if not role:
         errors['role'] = ["Role name required"]
 
-    if not staff_name:
-        errors['staff_name'] = ["Staff name required"]
+    if not full_name:
+        errors['full_name'] = ["Full name required"]
+
+    if not email:
+        errors['email'] = ["Staff email required"]
+    elif not is_valid_email(email):
+        errors['email'] = ['Valid email required.']
+    elif check_email_exist(email):
+        errors['email'] = ['Email already exists in our database.']
 
     if not photo:
         errors['photo'] = ["Photo required"]
@@ -717,11 +726,24 @@ def setup_staff_view(request):
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    serializer = StaffRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        data["user_id"] = user.user_id
+        data["email"] = user.email
+        data["full_name"] = user.full_name
+
+        user.user_type = "Saloon Staff"
+        user.save()
+
+
+
     shop = Shop.objects.get(shop_id=shop_id)
 
     ShopStaff.objects.create(
+        user=user,
             shop=shop,
-            staff_name=staff_name,
+            staff_name=full_name,
             role=role,
             photo=photo,
         )
@@ -888,6 +910,36 @@ def remove_service_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def remove_package_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    package_id = request.data.get('package_id', '')
+
+    if not package_id:
+        errors['package_id'] = ['Package ID is required.']
+
+    try:
+        package = ShopPackage.objects.get(id=package_id)
+    except:
+        errors['package_id'] = ['Package does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    package.delete()
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
 
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
@@ -897,7 +949,7 @@ def add_package_view(request):
     data = {}
     errors = {}
 
-    shop_id = request.data.get('shop_id', '')
+    service_id = request.data.get('service_id', '')
     package_name = request.data.get('package_name', '')
     price = request.data.get('price', '')
     photo = request.data.get('photo', '')
@@ -911,23 +963,22 @@ def add_package_view(request):
     if not photo:
         errors['photo'] = ["Photo required."]
 
-    if not shop_id:
-        errors['shop_id'] = ['Shop ID is required.']
+    if not service_id:
+        errors['service_id'] = ['Service ID is required.']
 
     try:
-        shop = Shop.objects.get(shop_id=shop_id)
-    except Shop.DoesNotExist:
-        errors['shop_id'] = ['Shop does not exist.']
+        service = ShopService.objects.get(service_id=service_id)
+    except ShopService.DoesNotExist:
+        errors['service_id'] = ['Service does not exist.']
 
     if errors:
         payload['message'] = "Errors"
         payload['errors'] = errors
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
-    shop = Shop.objects.get(shop_id=shop_id)
 
     ShopPackage.objects.create(
-            shop=shop,
+            service=service,
             package_name=package_name,
             price=price,
             photo=photo,
@@ -1118,6 +1169,46 @@ def get_staffs_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def staff_details_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    staff_id = request.query_params.get('staff_id', None)
+
+    if not staff_id:
+        errors['staff_id'] = ["Staff id required"]
+
+    try:
+        staff = ShopStaff.objects.get(staff_id=staff_id)
+    except ShopStaff.DoesNotExist:
+        errors['staff_id'] = ['Staff does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    staff_detail = ShopStaff.objects.get(staff_id=staff_id)
+
+    staff_detail_serializer = ShopStaffSerializer(staff_detail, many=False)
+    if staff_detail_serializer:
+        _staff = staff_detail_serializer.data
+
+    payload['message'] = "Successful"
+    payload['data'] = _staff
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+
+
+
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
@@ -1180,6 +1271,104 @@ def get_services_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def get_package_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    service_id = request.query_params.get('service_id', None)
+
+    if not service_id:
+        errors['service_id'] = ['Service ID is required.']
+
+    try:
+        service = ShopService.objects.get(service_id=service_id)
+    except ShopService.DoesNotExist:
+        errors['service_id'] = ['Service does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    search_query = request.query_params.get('search', '')
+    page_number = request.query_params.get('page', 1)
+    page_size = 10
+
+    packages = ShopPackage.objects.filter(service=service)
+
+    if search_query:
+        packages = packages.filter(
+            Q(service_id__icontains=search_query) |
+            Q(service_type__icontains=search_query)
+        )
+
+    paginator = Paginator(packages, page_size)
+
+    try:
+        paginated_packages = paginator.page(page_number)
+    except PageNotAnInteger:
+        paginated_packages = paginator.page(1)
+    except EmptyPage:
+        paginated_packages = paginator.page(paginator.num_pages)
+
+    packages_serializer = ShopPackageSerializer(paginated_packages, many=True)
+
+    data['packages'] = packages_serializer.data
+    data['pagination'] = {
+        'page_number': paginated_packages.number,
+        'total_pages': paginator.num_pages,
+        'next': paginated_packages.next_page_number() if paginated_packages.has_next() else None,
+        'previous': paginated_packages.previous_page_number() if paginated_packages.has_previous() else None,
+    }
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def package_details_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    package_id = request.query_params.get('package_id', None)
+
+    if not package_id:
+        errors['package_id'] = ["Package id required"]
+
+    try:
+        package = ShopPackage.objects.get(id=package_id)
+    except ShopPackage.DoesNotExist:
+        errors['package_id'] = ['Package does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    package_detail = ShopPackage.objects.get(id=package_id)
+
+    package_id_serializer = ShopPackageSerializer(package_detail, many=False)
+    if package_id_serializer:
+        _package = package_id_serializer.data
+
+    payload['message'] = "Successful"
+    payload['data'] = _package
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+
+
 @api_view(['POST', ])
 @permission_classes([])
 @authentication_classes([])
@@ -1227,6 +1416,63 @@ def remove_shop_view(request):
 
 
 
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def setup_services_staff_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    shop_id = request.data.get('shop_id', '')
+    staff_ids = request.data.get('staff_id', [])
+    service_id = request.data.get('service_id', '')
+
+
+    if not service_id:
+        errors['service_id'] = ["Services ID required"]
+
+    if not staff_ids:
+        errors['staff_ids'] = ["Staff IDs required"]
+
+
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except Shop.DoesNotExist:
+        errors['shop_id'] = ['Shop does not exist.']
+
+
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    shop = Shop.objects.get(shop_id=shop_id)
+
+    shop_service = ShopService.objects.get(
+            service_id=service_id
+        )
+
+
+    for staff_id in staff_ids:
+        staff = ShopStaff.objects.get(staff_id=staff_id)
+        ServiceSpecialist.objects.create(
+            service=shop_service,
+            specialist=staff
+        )
+
+
+
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
 
 
 def check_email_exist(email):

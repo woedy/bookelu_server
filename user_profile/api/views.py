@@ -5,6 +5,7 @@ from rest_framework.decorators import permission_classes, api_view, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from bookings.models import Booking
 from user_profile.models import UserProfile
 
 User = get_user_model()
@@ -17,11 +18,16 @@ def get_user_profile_view(request):
     payload = {}
     data = {}
     user_data = {}
+    all_bookings = []
 
     user_id = request.query_params.get('user_id', None)
 
     user = User.objects.get(user_id=user_id)
     personal_info = UserProfile.objects.get(user=user)
+
+    bookings = Booking.objects.filter(client=user).order_by("-created_at")
+
+
 
     user_data['user_id'] = user.user_id
     user_data['email'] = user.email
@@ -29,7 +35,22 @@ def get_user_profile_view(request):
 
     user_data['photo'] = personal_info.photo.url
     user_data['phone'] = personal_info.phone
+    user_data['bookings_count'] = bookings.count()
     data['user_data'] = user_data
+
+    for booking in bookings:
+        _data = {
+            "photo": booking.shop.photo.url,
+            "shop_name": booking.shop.shop_name,
+            "price": booking.actual_price,
+            "service": booking.service_type,
+            "booking_date": booking.booking_date,
+            "booking_time": booking.booking_time,
+        }
+
+        all_bookings.append(_data)
+
+    data['bookings'] = all_bookings
 
     payload['message'] = "Successful"
     payload['data'] = data

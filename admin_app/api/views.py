@@ -429,7 +429,6 @@ def list_all_bookings_review_view(request):
 
     if search_query:
         all_bookings_ratings = all_bookings_ratings.filter(Q(booking__booking_id__icontains=search_query) |
-                                                             Q(booking__service__service_name__icontains=search_query) |
                                                              Q(booking__client__email__icontains=search_query))
 
     paginator = Paginator(all_bookings_ratings, page_size)
@@ -441,15 +440,23 @@ def list_all_bookings_review_view(request):
     except EmptyPage:
         paginated_ratings = paginator.page(paginator.num_pages)
 
+
     ratings_data = []
     for rating in paginated_ratings:
+        bookings = Booking.objects.filter(client=rating.booking.client)
+
         rating_data = {
             'service_id': rating.booking.service.service_id,
             'service_type': rating.booking.service.service_type,
             'client_name': rating.booking.client.full_name,
+            'photo': rating.booking.client.personal_info.photo.url,
+            'client_email': rating.booking.client.email,
+            'contact': rating.booking.client.personal_info.phone,
             'shop_name': rating.booking.shop.shop_name,
             'rating': rating.rating,
-            'report': rating.report
+            'report': rating.report,
+            'bookings_count': bookings.count(),
+
         }
         ratings_data.append(rating_data)
 

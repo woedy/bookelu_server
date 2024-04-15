@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from bookings.models import Booking, BookingPayment, BookingRating
-from shop.models import ShopService, Shop, ShopStaff
+from shop.models import ShopService, Shop, ShopStaff, ShopPackage
 from user_profile.models import UserProfile
 
 User = get_user_model()
@@ -25,6 +25,9 @@ class ShopSerializer(serializers.ModelSerializer):
             'photo',
 
         ]
+
+
+
 class BookingPaymentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookingPayment
@@ -33,6 +36,19 @@ class BookingPaymentsSerializer(serializers.ModelSerializer):
             'payment_method',
             'amount',
         ]
+class BookingPackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopPackage
+        fields = [
+            'id',
+            'package_name',
+            'photo',
+            'price',
+            'rating',
+        ]
+
+
+
 class BookingSeriveSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopService
@@ -78,6 +94,8 @@ class BookingUserSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     client = BookingUserSerializer(many=False)
     service = BookingSeriveSerializer(many=False)
+    booked_staff = BookingStaffSerializer(many=False)
+    package = BookingPackageSerializer(many=False)
     booking_payments = BookingPaymentsSerializer(many=False)
     class Meta:
         model = Booking
@@ -87,12 +105,16 @@ class BookingSerializer(serializers.ModelSerializer):
             'service',
             'client',
             'service_type',
+            'package',
+            'booked_staff',
 
             'booking_date',
             'booking_time',
 
             're_scheduled',
             'booking_rescheduled_at',
+
+            'confirm_payment',
 
             'split',
             'booking_split_from',
@@ -117,6 +139,7 @@ class BookingSerializer(serializers.ModelSerializer):
 class ListBookingSerializer(serializers.ModelSerializer):
     client = BookingUserSerializer(many=False)
     service = BookingSeriveSerializer(many=False)
+    package = BookingPackageSerializer(many=False)
     booked_staff = BookingStaffSerializer(many=False)
     booking_payments = BookingPaymentsSerializer(many=False)
     shop = ShopSerializer(many=False)
@@ -129,6 +152,7 @@ class ListBookingSerializer(serializers.ModelSerializer):
             'service_type',
             'service',
             'shop',
+            'package',
 
             'booking_date',
             'booking_time',

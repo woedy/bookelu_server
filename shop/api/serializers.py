@@ -10,6 +10,7 @@ class ShopPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopPackage
         fields = [
+            'id',
             'package_name',
             'price',
             'rating',
@@ -28,11 +29,14 @@ class ShopServiceDetailSerializer(serializers.ModelSerializer):
         ]
 
 class ShopServiceSerializer(serializers.ModelSerializer):
+    package_service = ShopPackageSerializer(many=True)
+
     class Meta:
         model = ShopService
         fields = [
             'service_id',
             'service_type',
+            'package_service'
         ]
 
 class ShopInteriorSerializer(serializers.ModelSerializer):
@@ -56,19 +60,22 @@ class ShopWorkSerializer(serializers.ModelSerializer):
             'photo',
         ]
 
-
 class ShopStaffSerializer(serializers.ModelSerializer):
+    user_id = serializers.SerializerMethodField()
+
     class Meta:
         model = ShopStaff
         fields = [
             'staff_id',
+            'user_id',
             'staff_name',
             'photo',
             'role',
-            'photo',
             'rating',
         ]
 
+    def get_user_id(self, obj):
+        return obj.user.user_id if obj.user else None
 
 class ShopDetailSerializer(serializers.ModelSerializer):
     shop_services = ShopServiceSerializer(many=True)
@@ -76,7 +83,7 @@ class ShopDetailSerializer(serializers.ModelSerializer):
     shop_exterior = ShopExteriorSerializer(many=True)
     shop_work = ShopWorkSerializer(many=True)
     shop_staffs = ShopStaffSerializer(many=True)
-    shop_packages = ShopPackageSerializer(many=True)
+    #shop_packages = ShopPackageSerializer(many=True)
 
     class Meta:
         model = Shop
@@ -109,7 +116,7 @@ class ShopDetailSerializer(serializers.ModelSerializer):
             'shop_exterior',
             'shop_work',
             'shop_staffs',
-            'shop_packages',
+            #'shop_packages',
 
         ]
 

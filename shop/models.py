@@ -162,32 +162,6 @@ class ShopWork(models.Model):
     photo = models.ImageField(upload_to=upload_shop_work_path, null=True, blank=True)
 
 
-SERVICE_CHOICES = (
-    ('Haircut', 'Haircut'),
-    ('Nail Tech', 'Nail Tech'),
-    ('Massage', 'Massage'),
-    ('Hairstyle', 'Hairstyle'),
-
-
-)
-class ShopService(models.Model):
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_services')
-    service_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
-    service_type = models.CharField(max_length=200, choices=SERVICE_CHOICES,  null=True, blank=True)
-    price = models.CharField(max_length=255, null=True, blank=True)
-    duration = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField( null=True, blank=True)
-
-    active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-
-def pre_save_service_id_receiver(sender, instance, *args, **kwargs):
-    if not instance.service_id:
-        instance.service_id = unique_service_id_generator(instance)
-
-pre_save.connect(pre_save_service_id_receiver, sender=ShopService)
 
 
 
@@ -195,6 +169,8 @@ pre_save.connect(pre_save_service_id_receiver, sender=ShopService)
 
 class ShopStaff(models.Model):
     staff_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='staff_users')
+
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_staffs')
     staff_name = models.CharField(max_length=200,  null=True, blank=True)
     role = models.CharField(max_length=255, null=True, blank=True)
@@ -215,13 +191,44 @@ pre_save.connect(pre_save_staff_id_receiver, sender=ShopStaff)
 
 
 
+SERVICE_CHOICES = (
+    ('Haircut', 'Haircut'),
+    ('Nail Tech', 'Nail Tech'),
+    ('Massage', 'Massage'),
+    ('Hairstyle', 'Hairstyle'),
+
+
+)
+class ShopService(models.Model):
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_services')
+    service_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+
+    service_type = models.CharField(max_length=200, choices=SERVICE_CHOICES,  null=True, blank=True)
+    price = models.CharField(max_length=255, null=True, blank=True)
+    duration = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField( null=True, blank=True)
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+def pre_save_service_id_receiver(sender, instance, *args, **kwargs):
+    if not instance.service_id:
+        instance.service_id = unique_service_id_generator(instance)
+
+pre_save.connect(pre_save_service_id_receiver, sender=ShopService)
+
+
+
+
 class ServiceSpecialist(models.Model):
-    service = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='service_specialist')
+    service = models.ForeignKey(ShopService, on_delete=models.CASCADE, related_name='service_specialist')
     specialist = models.ForeignKey(ShopStaff, on_delete=models.CASCADE, related_name='staff_specialist')
 
 
 class ShopPackage(models.Model):
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_packages')
+    service = models.ForeignKey(ShopService, on_delete=models.CASCADE, related_name='package_service')
     package_name = models.CharField(max_length=200,  null=True, blank=True)
     photo = models.ImageField(upload_to=upload_package_photo_path, null=True, blank=True)
     price = models.CharField(max_length=255, null=True, blank=True)

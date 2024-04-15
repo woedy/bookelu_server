@@ -16,6 +16,7 @@ services:
       - POSTGRES_USER=bookelu_postgres
       - POSTGRES_PASSWORD=bookelu_postgres
     container_name: bookelu_postgres_db
+    restart: unless-stopped
 
   # Django Application
   bookelu_app:
@@ -30,6 +31,7 @@ services:
     command: python manage.py runserver 0.0.0.0:4040
     depends_on:
       - db
+    restart: unless-stopped
 
   # Celery Worker
   celery:
@@ -62,8 +64,7 @@ services:
 volumes:
   static_cdn:
 
-# networks:
-#   default:
-#     external: true
-#     name: docker-nginx-proxy-manager
-#
+#networks:
+#  default:
+#    external: true
+#    name: docker-nginx-proxy-manager

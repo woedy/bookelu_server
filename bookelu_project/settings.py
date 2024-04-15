@@ -26,7 +26,8 @@ SECRET_KEY = "django-insecure-=i@!9%gg4o^_)-b&o*br1pip8!%-_!8=yqf*1iq(_l(*+y_k$b
 DEBUG = True
 
 #ALLOWED_HOSTS = ["143.42.21.193", "127.0.0.1", "0.0.0.0", "localhost", "192.168.43.235", "192.168.43.223"]
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["143.42.21.193", "127.0.0.1", "0.0.0.0", "localhost", "192.168.43.235", "192.168.43.223", "api.bookelu.zuludesks.com"]
+#ALLOWED_HOSTS = ["*"]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'box.teamalfy.co.uk'
@@ -63,6 +64,7 @@ INSTALLED_APPS = [
     'bookings',
     'admin_app',
     'chats',
+    'slots'
 
 ]
 
@@ -105,24 +107,24 @@ ASGI_APPLICATION = "bookelu_project.asgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'bookelu_postgres',
-#         'USER': 'bookelu_postgres',
-#         'PASSWORD': 'bookelu_postgres',
-#         'HOST': 'db',
-#         'PORT': 5432,
-#      }
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
 # }
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bookelu_postgres',
+        'USER': 'bookelu_postgres',
+        'PASSWORD': 'bookelu_postgres',
+        'HOST': 'db',
+        'PORT': 5432,
+     }
+}
 
 
 CELERY_BROKER_URL = "redis://redis:6379"
@@ -216,9 +218,10 @@ CHANNEL_LAYERS = {
 
 
 
+
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = []
 
 CORS_ALLOW_CREDENTIALS = True
-
+CSRF_TRUSTED_ORIGINS = ['https://api.bookelu.zuludesks.com']
 

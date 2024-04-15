@@ -31,6 +31,25 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 
+class StaffRegistrationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['email', 'full_name']
+
+    def save(self):
+        user = User(
+            email=self.validated_data['email'].lower(),
+            full_name=self.validated_data['full_name'],
+
+        )
+        user.is_active = True
+        user.save()
+
+        return user
+
+
+
 
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)

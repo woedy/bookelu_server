@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -5,11 +7,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 
+from activities.models import AllActivity
 from bookings.api.serializers import ListBookingSerializer, BookingSerializer
 from bookings.models import Booking, BookingPayment, BookingRating, WalkInBooking
 from chats.models import PrivateChatRoom
-from shop.models import Shop, ShopService, ShopStaff
+from shop.models import Shop, ShopService, ShopStaff, ShopPackage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+from slots.models import StaffSlot, TimeSlot
 
 User = get_user_model()
 
@@ -118,7 +123,7 @@ def shop_booking_detail_view(request):
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
 @authentication_classes([TokenAuthentication, ])
-def book_appointment_view(request):
+def book_appointment_view1111111(request):
     payload = {}
     data = {}
     errors = {}
@@ -203,6 +208,198 @@ def book_appointment_view(request):
     payload['data'] = data
 
     return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def book_appointment_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        user_id = request.data.get('user_id', '')
+        shop_id = request.data.get('shop_id', '')
+        staff_id = request.data.get('staff_id', '')
+        service_id = request.data.get('service_id', '')
+        package_id = request.data.get('package_id', '')
+        home_service = request.data.get('home_service', '')
+        notes = request.data.get('notes', '')
+
+        slot_id = request.data.get('slot_id', "")
+        slot_time = request.data.get('slot_time', "")
+
+        if not user_id:
+            errors['user_id'] = ['Client User ID is required.']
+
+        if not staff_id:
+            errors['staff_id'] = ['Staff ID is required.']
+
+        if not service_id:
+            errors['service_id'] = ['Service ID is required.']
+
+        if not package_id:
+            errors['package_id'] = ['Package ID is required.']
+
+        if not shop_id:
+            errors['shop_id'] = ['Shop ID is required.']
+
+        if not slot_id:
+            errors['slot_id'] = ['Slot id is required.']
+
+        if not slot_time:
+            errors['slot_time'] = ['Slot time is required.']
+        else:
+            # Ensure the time is in the format "HH:MM:SS"
+            if len(slot_time) < 8:
+                slot_time += ':00'
+        try:
+            shop = Shop.objects.get(shop_id=shop_id)
+        except Shop.DoesNotExist:
+            errors['shop_id'] = ['Shop does not exist.']
+
+        try:
+            client = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            errors['client_id'] = ['Client does not exist']
+
+        try:
+            staff = ShopStaff.objects.get(staff_id=staff_id)
+        except:
+            errors['staff_id'] = ['Staff does not exist']
+
+        try:
+            shop_service = ShopService.objects.get(service_id=service_id)
+        except:
+            errors['service_id'] = ['Service does not exist']
+
+        try:
+            package = ShopPackage.objects.get(id=package_id)
+        except:
+            errors['package_id'] = ['Package does not exist']
+
+        try:
+            staff_slot = StaffSlot.objects.get(id=slot_id)
+
+            #admin = User.objects.filter(company=company, user_type="Admin").first()
+
+            # Check if there's already an appointment for the same date and time
+
+            existing_booking = Booking.objects.filter(
+                slot=staff_slot,
+                booking_time=slot_time,
+                client=client,
+                booked_staff=staff
+            ).first()
+
+            if existing_booking:
+                errors['slot_date'] = ['Booking for this date and time already exists.']
+                payload['message'] = "Errors"
+                payload['errors'] = errors
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+            # Check for appointment interval
+            _slot_date = staff_slot.slot_date
+            staff_interval = staff.user.availability_interval
+
+            package = ShopPackage.objects.get(id=package_id)
+
+
+
+            new_booking = Booking.objects.create(
+                shop=shop,
+                service=shop_service,
+                client=client,
+                booked_staff=staff,
+                package=package,
+                slot=staff_slot,
+                home_service=home_service,
+                booking_date=staff_slot.slot_date,
+                booking_time=slot_time,
+                amount_to_pay=package.price,
+                notes=notes,
+            )
+
+            staff_slot.state = "Partial"
+            staff_slot.save()
+
+
+
+            # Generate room
+            new_room = PrivateChatRoom.objects.create(
+                shop=shop.user,
+                client=client
+            )
+
+            new_booking.room = new_room
+            new_booking.save()
+
+            slot_times = TimeSlot.objects.filter(staff_slot=staff_slot)
+
+            for time in slot_times:
+                if str(time.time) == str(slot_time):
+                    print("################")
+                    print("The time is in the database")
+                    if time.occupied:
+                        errors['slot_time'] = ['Slot time is already occupied.']
+                        payload['message'] = "Errors"
+                        payload['errors'] = errors
+                        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+                    elif not time.occupied:
+                        time.occupied = True
+                        time.occupant = client
+                        time.booking_id = new_booking.id
+                        time.save()
+
+            occupied_count = TimeSlot.objects.filter(staff_slot=staff_slot, occupied=True)
+
+            if len(occupied_count) == staff_slot.time_slot_count:
+                staff_slot.state = "Occupied"
+                staff_slot.save()
+
+            # SEND CLIENT EMAIL
+            # client_subject = f"Yay! Your Appointment with {staff.user.full_name} is Confirmed 🎉"
+            # client_content = f"Hey {client.full_name},\nGuess what? Your appointment with {staff.user.full_name} on {new_booking.booking_date} at {new_booking.booking_time} is all set! 🌟\n\nMark your calendar and set your reminders because we can't wait to see you!\n\nCheers,\n\nThe {shop.shop_name} Team"
+#
+            # # SEND PRACTITIONER EMAIL
+            # pract_subject = f"New Appointment Alert!🚨"
+            # pract_content = f"Hello {staff.user.full_name},\n\nGreat news! {client.full_name} has booked an appointment with you on {new_booking.booking_date} at {new_booking.booking_time}. Time to show off your skills!🌟\n\nBest,\n\nThe {shop.shop_name} Team"
+#
+            # # Use Celery chain to execute tasks in sequence
+            # email_chain = chain(
+            #     send_client_email.si(client_subject, client_content, client.email),
+            #     send_practitioner_email.si(pract_subject, pract_content, practitioner.email),
+            # )
+#
+            # # Execute the Celery chain asynchronously
+            # email_chain.apply_async()
+#
+
+            # Add new ACTIVITY
+            # new_activity = AllActivity.objects.create(
+            #     user=new_appointment.app_admin,
+            #     subject="New Appointment Set",
+            #     body=f"New appointment set between {staff.user.full_name} and {client.full_name} on {new_booking.booking_date} at {new_booking.booking_time}"
+            # )
+            # new_activity.save()
+
+            data['booking_id'] = new_booking.booking_id
+            payload['data'] = data
+
+        except StaffSlot.DoesNotExist:
+            errors['slot_id'] = ['Slot does not exist']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        payload['message'] = "Appointment added successfully"
+        return Response(payload)
+
 
 
 
@@ -361,7 +558,7 @@ def client_bookings_view(request):
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
 @authentication_classes([TokenAuthentication, ])
-def reschedule_appointment_view(request):
+def reschedule_appointment_view1111(request):
     payload = {}
     data = {}
     errors = {}
@@ -404,6 +601,123 @@ def reschedule_appointment_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def reschedule_appointment_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        client_id = request.data.get('client_id', "")
+        booking_id = request.data.get('booking_id', "")
+        slot_id = request.data.get('slot_id', "")
+        old_slot_time = request.data.get('old_slot_time', "")
+        new_slot_time = request.data.get('new_slot_time', "")
+
+        if not client_id:
+            errors['client_id'] = ['Client User ID is required.']
+
+
+        if not booking_id:
+            errors['booking_id'] = ['Booking ID is required.']
+
+        if not slot_id:
+            errors['slot_id'] = ['Slot ID is required.']
+
+        if not old_slot_time:
+            errors['old_slot_time'] = ['Old slot time is required.']
+        else:
+            # Ensure the time is in the format "HH:MM:SS"
+            if len(old_slot_time) < 8:
+                old_slot_time += ':00'
+
+        if not new_slot_time:
+            errors['new_slot_time'] = ['New slot time is required.']
+        else:
+            # Ensure the time is in the format "HH:MM:SS"
+            if len(new_slot_time) < 8:
+                new_slot_time += ':00'
+
+
+        try:
+            client = User.objects.get(user_id=client_id)
+        except:
+            errors['client_id'] = ['Client does not exist']
+
+        try:
+            staff_slot = StaffSlot.objects.get(id=slot_id)
+        except StaffSlot.DoesNotExist:
+            errors['slot_id'] = ['Slot does not exist']
+        except Exception as e:
+            errors['slot_id'] = [f'Error fetching slot: {str(e)}']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            booking = Booking.objects.get(booking_id=booking_id)
+        except:
+            errors['booking_id'] = ['Booking does not exist']
+
+        slot_times = TimeSlot.objects.all().filter(staff_slot=staff_slot)
+
+        booking.booking_time = new_slot_time
+        booking.save()
+
+        for time in slot_times:
+            if str(time.time) == str(old_slot_time):
+                time.appointment = None
+                time.occupied = False
+                time.occupant = None
+                time.save()
+
+            if str(time.time) == str(new_slot_time):
+                time.appointment = booking
+                time.occupied = True
+                time.occupant = client
+                time.save()
+
+        booking.status = "Pending"
+        booking.re_scheduled = True
+        booking.booking_rescheduled_at = timezone.now()
+        booking.save()
+
+        # client_subject = f"Appointment Rescheduled! New Time, Same Great Service 🕐"
+        # client_content = f"Hey {booking.client.full_name},\n\nour appointment with {booking.booked_staff.full_name} has been rescheduled to {booking.booking_date} at {booking.booking_time}. We're still super excited to see you!\n\nCheers,\n\nThe {shop.shop_name} Team"
+#
+        # pact_subject = f"Appointment Rescheduled!🕐"
+        # pract_content = f"We want to inform you that the appointment for {appointment.appointee.full_name} has been rescheduled to {appointment.appointment_date} at {appointment.appointment_time}. Please make note of this change in your schedule.\n\nCheers,\n\nThe {company.company_name} Team"
+#
+        # email_chain = chain(
+        #     send_client_email.si(client_subject, client_content, client.email),
+        #     send_practitioner_email.si(pact_subject, pract_content, appointment.appointer.email),
+        # )
+#
+        # email_chain.apply_async()
+#
+        # new_activity = AllActivity.objects.create(
+        #     user=appointment.app_admin,
+        #     subject="Appointment Rescheduled!",
+        #     body=f"Appointment between {appointment.appointer.full_name} and {appointment.appointee.full_name} on {appointment.appointment_date} at {appointment.appointment_time} has been rescheduled."
+        # )
+        # new_activity.save()
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        payload['message'] = "Booking rescheduled successfully"
+        payload['data'] = data
+
+        return Response(payload)
+
+
+
 
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
@@ -430,6 +744,42 @@ def cancel_appointment_view(request):
 
 
     booking.status = "Canceled"
+    booking.save()
+
+
+    data['booking_id'] = booking.booking_id
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def complete_appointment_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    booking_id = request.data.get('booking_id', '')
+
+    if not booking_id:
+        errors['booking_id'] = ['Booking id is required.']
+
+    try:
+        booking = Booking.objects.get(booking_id=booking_id)
+    except:
+        errors['booking_id'] = ['Booking does not exist.']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+    booking.status = "Completed"
     booking.save()
 
 

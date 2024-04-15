@@ -8,6 +8,8 @@ from user_profile.models import UserProfile
 
 User = get_user_model()
 
+
+
 class ListAdminShopsSerializer(serializers.ModelSerializer):
     services_count = serializers.SerializerMethodField()
     staffs_count = serializers.SerializerMethodField()

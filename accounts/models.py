@@ -66,6 +66,18 @@ USER_TYPE = (
 
 )
 
+
+INTERVAL_CHOICES = (
+    ("1 hour", "1 hour"),
+    ("6 hours", "6 hours"),
+    ("12 hours", "12 hours"),
+    ("8 hours", "8 hours"),
+    ("24 hours", "24 hours"),
+    ("48 hours", "48 hours")
+
+)
+
+
 class User(AbstractBaseUser):
     user_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     email = models.EmailField(max_length=255, unique=True)
@@ -80,6 +92,9 @@ class User(AbstractBaseUser):
 
     email_token = models.CharField(max_length=10, blank=True, null=True)
     email_verified = models.BooleanField(default=False)
+
+    availability_interval = models.CharField(choices=INTERVAL_CHOICES, default="1 hour", null=True, blank=True, max_length=100)
+
 
     is_active = models.BooleanField(default=True)
     is_online = models.BooleanField(default=True)

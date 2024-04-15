@@ -2,7 +2,7 @@ from django.urls import path
 
 from bookings.api.views import shop_bookings_view, shop_booking_detail_view, book_appointment_view, \
     client_bookings_view, reschedule_appointment_view, cancel_appointment_view, make_payment_view, booking_ratings, \
-    add_split_view, walkin_booking_view
+    add_split_view, walkin_booking_view, complete_appointment_view
 
 app_name = 'bookings'
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('client-bookings/', client_bookings_view, name="client_bookings_view"),
     path('reschedule-appointment/', reschedule_appointment_view, name="reschedule_appointment_view"),
     path('cancel-appointment/', cancel_appointment_view, name="cancel_appointment_view"),
+    path('complete-appointment/', complete_appointment_view, name="complete_appointment_view"),
     path('make-payment/', make_payment_view, name="make_payment_view"),
     path('rate-booking/', booking_ratings, name="booking_ratings"),
 ]

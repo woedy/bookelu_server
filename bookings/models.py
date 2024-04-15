@@ -4,7 +4,8 @@ from django.db.models.signals import pre_save
 
 from bookelu_project.utils import unique_booking_id_generator
 from chats.models import PrivateChatRoom
-from shop.models import ShopService, Shop, ShopStaff
+from shop.models import ShopService, Shop, ShopStaff, ShopPackage
+from slots.models import StaffSlot
 
 User = settings.AUTH_USER_MODEL
 
@@ -30,9 +31,11 @@ class Booking(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, null=True, related_name='shop_bookings')
     service = models.ForeignKey(ShopService, on_delete=models.SET_NULL, null=True, related_name='shop_service_bookings')
     booked_staff = models.ForeignKey(ShopStaff, on_delete=models.SET_NULL, null=True,related_name='booking_staffs')
+    package = models.ForeignKey(ShopPackage, on_delete=models.SET_NULL, null=True,related_name='booking_package')
     client = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='shop_service_bookings')
     service_type = models.CharField(max_length=200,  null=True, blank=True)
     home_service = models.BooleanField(default=False, blank=True, null=True)
+    slot = models.ForeignKey(StaffSlot, on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_slot")
 
     booking_date = models.DateField(auto_now=False, auto_now_add=False, null=True, blank=True)
     booking_time = models.TimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
@@ -47,6 +50,8 @@ class Booking(models.Model):
     amount_to_pay = models.CharField(null=True, blank=True, max_length=100)
     actual_price = models.CharField(null=True, blank=True, max_length=100)
     paid = models.BooleanField(default=False)
+
+    confirm_payment = models.BooleanField(default=False)
 
     actual_duration = models.CharField(null=True, blank=True, max_length=100)
 
