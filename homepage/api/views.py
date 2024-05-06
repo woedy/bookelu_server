@@ -93,7 +93,19 @@ def client_homepage_view(request):
     bookings_today = []
     shop_categories = []
     shop_staffs = []
+    promotions = []
 
+
+    promotion = {
+        "title": "Black Friday",
+        "package_name": "Well Dress Rasta",
+        "original_price": "$3000",
+        "promo_price": "$2000",
+        "status": "Available",
+        "photo": "package_image.png"
+    }
+
+    promotions.append(promotion)
 
     user_id = request.query_params.get('user_id', None)
 
@@ -118,6 +130,7 @@ def client_homepage_view(request):
         bookings_today = booking_serializer.data
 
     data['bookings'] = bookings_today
+    data['promotions'] = promotions
 
 
 

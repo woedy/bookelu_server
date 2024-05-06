@@ -55,7 +55,7 @@ class BookingSeriveSerializer(serializers.ModelSerializer):
         fields = [
             'service_id',
             'service_type',
-            'price',
+            #'price',
         ]
 
 

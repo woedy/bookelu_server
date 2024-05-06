@@ -10,7 +10,9 @@ from django.contrib.auth import get_user_model
 from activities.models import AllActivity
 from bookings.api.serializers import ListBookingSerializer, BookingSerializer
 from bookings.models import Booking, BookingPayment, BookingRating, WalkInBooking
-from chats.models import PrivateChatRoom
+from chats.api.serializers import PrivateRoomChatMessageSerializer
+from chats.api.views import send_message
+from chats.models import PrivateChatRoom, PrivateRoomChatMessage
 from shop.models import Shop, ShopService, ShopStaff, ShopPackage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -330,6 +332,7 @@ def book_appointment_view(request):
 
             # Generate room
             new_room = PrivateChatRoom.objects.create(
+                room_id=new_booking.booking_id,
                 shop=shop.user,
                 client=client
             )
@@ -414,16 +417,14 @@ def walkin_booking_view(request):
     shop_id = request.data.get('shop_id', '')
     staff_id = request.data.get('staff_id', '')
     service_id = request.data.get('service_id', '')
+    package_id = request.data.get('package_id', '')
     date = request.data.get('date', '')
     time = request.data.get('time', '')
-    home_service = request.data.get('home_service', '')
     notes = request.data.get('notes', '')
 
     customer_name = request.data.get('customer_name', '')
     contact = request.data.get('contact', '')
     email = request.data.get('email', '')
-    country = request.data.get('country', '')
-    practitioner = request.data.get('practitioner', '')
 
     if not shop_id:
         errors['shop_id'] = ['Shop id is required.']
@@ -433,6 +434,15 @@ def walkin_booking_view(request):
 
     if not staff_id:
         errors['staff_id'] = ['Staff id is required.']
+
+    if not service_id:
+        errors['service_id'] = ['Service id is required.']
+
+    if not package_id:
+        errors['package_id'] = ['Package id is required.']
+
+    if not date:
+        errors['date'] = ['Booking date is required.']
 
     if not time:
         errors['time'] = ['Booking time is required.']
@@ -448,9 +458,15 @@ def walkin_booking_view(request):
         errors['staff_id'] = ['Staff does not exist.']
 
     try:
-        shop_service = ShopService.objects.get(id=service_id)
+        shop_service = ShopService.objects.get(service_id=service_id)
     except:
         errors['service_id'] = ['Service does not exist.']
+
+    try:
+        service_package = ShopPackage.objects.get(id=package_id)
+    except:
+        errors['package_id'] = ['Package does not exist.']
+
 
     if errors:
         payload['message'] = "Errors"
@@ -460,8 +476,8 @@ def walkin_booking_view(request):
     new_booking = Booking.objects.create(
         shop=shop,
         service=shop_service,
+        package=service_package,
         booked_staff=staff,
-        home_service=home_service,
         booking_date=date,
         booking_time=time,
         notes=notes,
@@ -473,12 +489,8 @@ def walkin_booking_view(request):
        booking=new_booking,
        customer_name=customer_name,
        contact=contact,
-       email=email,
-       country=country,
-       practitioner=practitioner,
+       email=email
    )
-
-
 
 
 
@@ -933,3 +945,126 @@ def add_split_view(request):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def send_booking_chat_message(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    booking_id = request.data.get('booking_id', '')
+    user_id = request.data.get('user_id', '')
+    message = request.data.get('message', '')
+
+    if not user_id:
+        errors['user_id'] = ['User ID is required.']
+
+    if not booking_id:
+        errors['booking_id'] = ['Booking id is required.']
+
+    try:
+        booking = Booking.objects.get(booking_id=booking_id)
+    except:
+        errors['booking_id'] = ['Booking does not exist.']
+
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except:
+        errors['user_id'] = ['User does not exist.']
+
+
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        room_obj = PrivateChatRoom.objects.get(room_id=booking_id)
+
+        message = PrivateRoomChatMessage.objects.create(
+            user=user,
+            room=room_obj,
+            message=message
+        )
+        message.save()
+
+        # Fetch the messages for the room
+        qs = PrivateRoomChatMessage.objects.by_room(room_obj).order_by('-timestamp')[:20]
+        serializers = PrivateRoomChatMessageSerializer(qs, many=True)
+        if serializers:
+            data = serializers.data
+            #data['messages'] = data
+
+    except PrivateChatRoom.DoesNotExist:
+        errors['booking_id'] = ['Chat room does not exist.']
+
+
+    # Trigger the event
+    send_message(
+        booking_id,
+        'send-message',
+        {'messages': data}
+    )
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def get_booking_chat_messages(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    booking_id = request.data.get('booking_id', '')
+    user_id = request.data.get('user_id', '')
+    message = request.data.get('message', '')
+
+    if not user_id:
+        errors['user_id'] = ['User ID is required.']
+
+    if not booking_id:
+        errors['booking_id'] = ['Booking id is required.']
+
+    try:
+        booking = Booking.objects.get(booking_id=booking_id)
+    except:
+        errors['booking_id'] = ['Booking does not exist.']
+
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except:
+        errors['user_id'] = ['User does not exist.']
+
+
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        room_obj = PrivateChatRoom.objects.get(room_id=booking_id)
+
+        qs = PrivateRoomChatMessage.objects.by_room(room_obj).order_by('-timestamp')[:20]
+        serializers = PrivateRoomChatMessageSerializer(qs, many=True)
+        if serializers:
+            data = serializers.data
+    except PrivateRoomChatMessage.DoesNotExist:
+        errors['booking_id'] = ['Chat room messages does not exist.']
+
+
+    # Trigger the event
+    send_message(
+        booking_id,
+        'get-all-messages',
+        {'messages': data}
+    )
+    return Response(payload, status=status.HTTP_200_OK)

@@ -1,5 +1,7 @@
 import math
 import re
+from datetime import datetime
+
 from celery import chain
 
 from django.shortcuts import render
@@ -18,9 +20,9 @@ from bookelu_project import settings
 from bookelu_project.utils import generate_email_token
 from payments.models import PaymentSetup
 from shop.api.serializers import ShopDetailSerializer, ListShopsSerializer, ShopStaffSerializer, ShopServiceSerializer, \
-    ShopServiceDetailSerializer, ShopPackageSerializer
+    ShopServiceDetailSerializer, ShopPackageSerializer, ShopAvailabilitySerializer
 from shop.models import Shop, ShopInterior, ShopExterior, ShopWork, ShopService, ShopStaff, ShopPackage, \
-    ServiceSpecialist
+    ServiceSpecialist, ShopAvailability
 from rest_framework.authtoken.models import Token
 from django.core.mail import EmailMessage, send_mail
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -589,21 +591,21 @@ def setup_services_view(request):
 
     shop_id = request.data.get('shop_id', '')
     service_type = request.data.get('service_type', '')
-    price = request.data.get('price', '')
-    duration = request.data.get('duration', '')
+    #price = request.data.get('price', '')
+    #duration = request.data.get('duration', '')
     description = request.data.get('description', '')
 
     if not service_type:
         errors['service_type'] = ["Services type required"]
 
-    if not price:
-        errors['price'] = ["Price required"]
+    #if not price:
+    #    errors['price'] = ["Price required"]
 
     if not description:
         errors['description'] = ["Description required"]
 
-    if not duration:
-        errors['duration'] = ["Duration required"]
+    # if not duration:
+    #     errors['duration'] = ["Duration required"]
 
     if not shop_id:
         errors['shop_id'] = ['Shop ID is required.']
@@ -623,8 +625,8 @@ def setup_services_view(request):
     ShopService.objects.create(
             shop=shop,
             service_type=service_type,
-            price=price,
-            duration=duration,
+            #price=price,
+            #duration=duration,
             description=description,
         )
 
@@ -1516,3 +1518,117 @@ def is_valid_password(password):
         return False
 
     return True
+
+
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def set_shop_availability(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        shop_id = request.data.get('shop_id', "")
+        availability = request.data.get('availability', [])
+
+        if not shop_id:
+            errors['shop_id'] = ['Shop ID is required.']
+
+        if not availability:
+            errors['availability'] = ['Availability is required.']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            shop = Shop.objects.get(shop_id=shop_id)
+        except Shop.DoesNotExist:
+            errors['shop_id'] = ['Shop does not exist.']
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        for slot in availability:
+            date_str = slot.get('date', "")
+            open_time_str = slot.get('open', "")
+            closed_time_str = slot.get('closed', "")
+
+            try:
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                open_time = datetime.strptime(open_time_str, "%H:%M").time()
+                closed_time = datetime.strptime(closed_time_str, "%H:%M").time()
+            except ValueError:
+                errors['availability'] = ['Invalid date or time format.']
+                payload['message'] = "Errors"
+                payload['errors'] = errors
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if a shop availability already exists for the date
+            existing_availability = ShopAvailability.objects.filter(shop=shop, date=date)
+            if existing_availability.exists():
+                # Update the existing availability
+                shop_availability = existing_availability.first()
+                shop_availability.open = open_time
+                shop_availability.closed = closed_time
+                shop_availability.save()
+            else:
+                # Create a new shop availability
+                shop_availability = ShopAvailability.objects.create(
+                    shop=shop,
+                    date=date,
+                    open=open_time,
+                    closed=closed_time
+                )
+
+            # Add the shop availability data to the response
+            data[date_str] = {
+                "open": shop_availability.open.strftime("%H:%M"),
+                "closed": shop_availability.closed.strftime("%H:%M")
+            }
+
+        payload['message'] = "Slot added or updated successfully"
+        payload['data'] = data
+
+        return Response(payload)
+
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def list_shop_availability(request):
+    payload = {}
+    data = {}
+
+    errors = {}
+
+    if request.method == 'POST':
+        shop_id = request.data.get('shop_id', "")
+
+        if not shop_id:
+            errors['shop_id'] = ['Shop ID is required.']
+
+        try:
+            shop = Shop.objects.get(shop_id=shop_id)
+        except Shop.DoesNotExist:
+            errors['shop_id'] = ['Shop does not exist.']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        availabilities = ShopAvailability.objects.filter(shop=shop)
+        serializer = ShopAvailabilitySerializer(availabilities, many=True)
+        data["shop_availability"] = serializer.data
+
+        payload['message'] = "Successful"
+        payload['data'] = data
+        return Response(payload)
+
+

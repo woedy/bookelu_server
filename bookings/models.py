@@ -110,8 +110,6 @@ class WalkInBooking(models.Model):
     customer_name = models.CharField(max_length=200,  null=True, blank=True)
     contact = models.CharField(max_length=200,  null=True, blank=True)
     email = models.CharField(max_length=200,  null=True, blank=True)
-    country = models.CharField(max_length=200,  null=True, blank=True)
-    practitioner = models.CharField(max_length=200,  null=True, blank=True)
 
 
     active = models.BooleanField(default=True)

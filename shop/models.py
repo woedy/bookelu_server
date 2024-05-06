@@ -203,9 +203,9 @@ class ShopService(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_services')
     service_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
 
-    service_type = models.CharField(max_length=200, choices=SERVICE_CHOICES,  null=True, blank=True)
-    price = models.CharField(max_length=255, null=True, blank=True)
-    duration = models.CharField(max_length=255, null=True, blank=True)
+    service_type = models.CharField(max_length=500, null=True, blank=True)
+    #price = models.CharField(max_length=255, null=True, blank=True)
+    #duration = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField( null=True, blank=True)
 
     active = models.BooleanField(default=True)
@@ -233,6 +233,36 @@ class ShopPackage(models.Model):
     photo = models.ImageField(upload_to=upload_package_photo_path, null=True, blank=True)
     price = models.CharField(max_length=255, null=True, blank=True)
     rating = models.IntegerField(default=0, null=True, blank=True)
+
+
+
+
+
+
+#####################################################
+
+
+
+
+SLOT_STATE_CHOICES = (
+    ("Vacant", "Vacant"),
+    ("Partial", "Partial"),
+    ("Occupied", "Occupied")
+)
+
+class ShopAvailability(models.Model):
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name="shop_slots")
+
+    date = models.DateField(null=True, blank=True)
+    state = models.CharField(default="Vacant", choices=SLOT_STATE_CHOICES, max_length=255)
+
+    open = models.TimeField(null=True, blank=True)
+    closed = models.TimeField(null=True, blank=True)
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
 
 

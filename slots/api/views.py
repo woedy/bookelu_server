@@ -71,8 +71,6 @@ def set_staff_slot(request):
                     new_time_slots = slot_data.get('time_slots')
 
                     # Convert the times to datetime objects
-                    time_objects = [datetime.strptime(t, "%H:%M:%S" if len(t) > 5 else "%H:%M").time() for t in slot_data['time_slots']]
-
                     # # Check if the times are at least  hours apart
                     # if not are_times_spaced(interval, time_objects):
                     #     errors['availability'] = [f'Times provided should be at least {interval} apart.']

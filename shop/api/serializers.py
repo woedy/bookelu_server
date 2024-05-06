@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff, ShopPackage
+from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff, ShopPackage, \
+    ShopAvailability
 
 User = get_user_model()
 
@@ -23,8 +24,8 @@ class ShopServiceDetailSerializer(serializers.ModelSerializer):
         fields = [
             'service_id',
             'service_type',
-            'price',
-            'duration',
+            #'price',
+            #'duration',
             'description',
         ]
 
@@ -137,3 +138,7 @@ class ListShopsSerializer(serializers.ModelSerializer):
 
 
 
+class ShopAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopAvailability
+        fields = '__all__'

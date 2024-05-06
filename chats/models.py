@@ -54,11 +54,11 @@ class PrivateChatRoom(models.Model):
         return f"Room-{self.room_id}"
 
 
-def pre_save_room_id_receiver(sender, instance, *args, **kwargs):
-    if not instance.room_id:
-        instance.room_id = unique_room_id_generator(instance)
-
-pre_save.connect(pre_save_room_id_receiver, sender=PrivateChatRoom)
+#def pre_save_room_id_receiver(sender, instance, *args, **kwargs):
+#    if not instance.room_id:
+#        instance.room_id = unique_room_id_generator(instance)
+#
+#pre_save.connect(pre_save_room_id_receiver, sender=PrivateChatRoom)
 
 
 

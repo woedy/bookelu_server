@@ -12,3 +12,4 @@ requests
 pyfcm
 django-cors-headers
 daphne
+pusher

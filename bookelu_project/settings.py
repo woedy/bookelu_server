@@ -107,24 +107,24 @@ ASGI_APPLICATION = "bookelu_project.asgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bookelu_postgres',
-        'USER': 'bookelu_postgres',
-        'PASSWORD': 'bookelu_postgres',
-        'HOST': 'db',
-        'PORT': 5432,
-     }
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'bookelu_postgres',
+#         'USER': 'bookelu_postgres',
+#         'PASSWORD': 'bookelu_postgres',
+#         'HOST': 'db',
+#         'PORT': 5432,
+#      }
+# }
 
 
 CELERY_BROKER_URL = "redis://redis:6379"
@@ -224,4 +224,12 @@ CORS_ALLOWED_ORIGINS = []
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = ['https://api.bookelu.zuludesks.com']
+
+
+
+PUSHER_APP_ID = '1796310'
+PUSHER_KEY = '8eb96ce903a8e1cf541f'
+PUSHER_SECRET = '7ddc1ad769cbaa539d19'
+PUSHER_CLUSTER = 'mt1'
+
 

@@ -5,7 +5,7 @@ from shop.api.views import add_shop_view, setup_shop_view, setup_services_view, 
     shop_details_view, add_package_view, setup_payment_view, get_staffs_view, remove_staff_view, admin_add_shop_view, \
     check_shop_email_exists, setup_shop_exterior_view, setup_shop_interior_view, setup_shop_work_view, \
     get_services_view, remove_service_view, get_package_view, staff_details_view, package_details_view, \
-    remove_package_view, setup_services_staff_view
+    remove_package_view, setup_services_staff_view, set_shop_availability, list_shop_availability
 
 app_name = 'shop'
 
@@ -42,5 +42,8 @@ urlpatterns = [
     path('remove-package/', remove_package_view, name="remove_package_view"),
 
     path('remove-service/', remove_service_view, name="remove_service_view"),
+
+    path('set-shop-availability/', set_shop_availability, name="set_shop_availability"),
+    path('list-shop-availability/', list_shop_availability, name="list_shop_availability"),
 
 ]
