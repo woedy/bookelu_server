@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from bookings.models import Booking, BookingPayment, BookingRating
+from shop.api.serializers import ServiceSpecialistSerializer
 from shop.models import ShopService, Shop, ShopStaff, ShopPackage
+from slots.api.serializers import StaffSlotSerializer
 from user_profile.models import UserProfile
 
 User = get_user_model()
@@ -23,6 +25,8 @@ class ShopSerializer(serializers.ModelSerializer):
         fields = [
             'shop_name',
             'photo',
+            'location_name',
+            'open'
 
         ]
 
@@ -50,16 +54,26 @@ class BookingPackageSerializer(serializers.ModelSerializer):
 
 
 class BookingSeriveSerializer(serializers.ModelSerializer):
+    #service_specialist = ServiceSpecialistSerializer(many=True)
+
     class Meta:
         model = ShopService
         fields = [
             'service_id',
             'service_type',
-            #'price',
+            'service_specialist',
         ]
 
+class BookendStaffUserSerializer(serializers.ModelSerializer):
+    staff_slot = StaffSlotSerializer(many=True)
+    class Meta:
+        model = User
+        fields = [
+            'staff_slot'
+        ]
 
 class BookingStaffSerializer(serializers.ModelSerializer):
+    user = BookendStaffUserSerializer(many=False)
     class Meta:
         model = ShopStaff
         fields = [
@@ -68,6 +82,7 @@ class BookingStaffSerializer(serializers.ModelSerializer):
             'role',
             'photo',
             'rating',
+            'user'
         ]
 
 
@@ -157,7 +172,7 @@ class ListBookingSerializer(serializers.ModelSerializer):
             'booking_date',
             'booking_time',
             'status',
-
+            'slot',
             'booking_payments',
             "booked_staff"
 

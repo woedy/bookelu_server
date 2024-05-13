@@ -18,6 +18,7 @@ from accounts.api.serializers import UserRegistrationSerializer, PasswordResetSe
 from activities.models import AllActivity
 from bookelu_project.utils import generate_email_token, generate_random_otp_code
 from bookelu_project.tasks import send_generic_email
+from bookings.models import Booking
 from shop.models import Shop
 from user_profile.models import UserProfile
 
@@ -258,6 +259,7 @@ def verify_user_email(request):
     data["user_id"] = user.user_id
     data["email"] = user.email
     data["full_name"] = user.full_name
+    data["photo"] = user_profile.photo.url
     data["token"] = token.key
 
     payload['message'] = "Successful"
@@ -425,6 +427,8 @@ class UserLogin(APIView):
         user.fcm_token = fcm_token
         user.save()
 
+        bookings = Booking.objects.filter(client=user).order_by("-created_at")
+
         data["user_id"] = user.user_id
         data["email"] = user.email
         data["full_name"] = user.full_name
@@ -432,6 +436,7 @@ class UserLogin(APIView):
         data["country"] = user_profile.country
         data["phone"] = user_profile.phone
         data["token"] = token.key
+        data['bookings_count'] = bookings.count()
 
         payload['message'] = "Successful"
         payload['data'] = data

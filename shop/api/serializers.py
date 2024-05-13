@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff, ShopPackage, \
-    ShopAvailability
+    ShopAvailability, ServiceSpecialist
+from slots.api.serializers import StaffSlotSerializer
 
 User = get_user_model()
 
@@ -29,15 +30,50 @@ class ShopServiceDetailSerializer(serializers.ModelSerializer):
             'description',
         ]
 
+
+class StaffUserSerializer(serializers.ModelSerializer):
+    staff_slot = StaffSlotSerializer(many=True)
+    class Meta:
+        model = User
+        fields = [
+            'staff_slot'
+        ]
+class SpecialistSerializer(serializers.ModelSerializer):
+    user = StaffUserSerializer(many=False)
+    class Meta:
+        model = ShopStaff
+        fields = [
+            'staff_id',
+            'user',
+            'staff_name',
+            'photo',
+            'role',
+            'rating'
+        ]
+
+
+class ServiceSpecialistSerializer(serializers.ModelSerializer):
+    specialist = SpecialistSerializer(many=False)
+    class Meta:
+        model = ServiceSpecialist
+        fields = [
+            #'service',
+            'specialist'
+        ]
+
+
+
 class ShopServiceSerializer(serializers.ModelSerializer):
     package_service = ShopPackageSerializer(many=True)
-
+    service_specialist = ServiceSpecialistSerializer(many=True)
     class Meta:
         model = ShopService
         fields = [
             'service_id',
             'service_type',
-            'package_service'
+            'package_service',
+            'service_specialist'
+
         ]
 
 class ShopInteriorSerializer(serializers.ModelSerializer):

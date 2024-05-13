@@ -197,7 +197,6 @@ SERVICE_CHOICES = (
     ('Massage', 'Massage'),
     ('Hairstyle', 'Hairstyle'),
 
-
 )
 class ShopService(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_services')

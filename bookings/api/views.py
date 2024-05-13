@@ -10,13 +10,14 @@ from django.contrib.auth import get_user_model
 from activities.models import AllActivity
 from bookings.api.serializers import ListBookingSerializer, BookingSerializer
 from bookings.models import Booking, BookingPayment, BookingRating, WalkInBooking
-from chats.api.serializers import PrivateRoomChatMessageSerializer
+from chats.api.serializers import PrivateRoomChatMessageSerializer, PrivateRoomSerializer
 from chats.api.views import send_message
 from chats.models import PrivateChatRoom, PrivateRoomChatMessage
 from shop.models import Shop, ShopService, ShopStaff, ShopPackage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from slots.models import StaffSlot, TimeSlot
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -622,6 +623,99 @@ def reschedule_appointment_view(request):
     errors = {}
 
     if request.method == 'POST':
+        booking_id = request.data.get('booking_id', '')
+        slot_id = request.data.get('slot_id', '')
+        slot_time = request.data.get('slot_time', '')
+        #old_slot_time = request.data.get('old_slot_time', '')
+
+        if not booking_id:
+            errors['booking_id'] = ['Booking ID is required.']
+
+        if not slot_id:
+            errors['slot_id'] = ['Slot ID is required.']
+
+        if not slot_time:
+            errors['slot_time'] = ['Slot time is required.']
+        #if not old_slot_time:
+        #    errors['old_slot_time'] = ['Old Slot time is required.']
+        else:
+            # Ensure the time is in the format "HH:MM:SS"
+            if len(slot_time) < 8:
+                slot_time += ':00'
+
+        try:
+            booking = Booking.objects.get(booking_id=booking_id)
+        except Booking.DoesNotExist:
+            errors['booking_id'] = ['Booking does not exist.']
+
+        try:
+            staff_slot = StaffSlot.objects.get(id=slot_id)
+        except StaffSlot.DoesNotExist:
+            errors['slot_id'] = ['Slot does not exist.']
+
+        if not errors:
+            # Check if the new slot is available
+            existing_booking = Booking.objects.filter(
+                slot=staff_slot,
+                booking_time=slot_time
+            ).exclude(booking_id=booking_id).first()
+
+            if existing_booking:
+                errors['slot_time'] = ['Booking for this date and time already exists.']
+            else:
+                # Update the booking details
+                booking.slot = staff_slot
+                booking.booking_time = slot_time
+                booking.booking_rescheduled_at = timezone.now()
+                booking.re_scheduled = True
+                booking.save()
+
+                slot_times = TimeSlot.objects.filter(staff_slot=staff_slot)
+
+                for time in slot_times:
+                    if str(time.time) == str(slot_time):
+                        print("################")
+                        print("The time is in the database")
+                        if time.occupied:
+                            errors['slot_time'] = ['Slot time is already occupied.']
+                            payload['message'] = "Errors"
+                            payload['errors'] = errors
+                            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+                        elif not time.occupied:
+                            time.occupied = True
+                            time.occupant = booking.client
+                            time.booking_id = booking.id
+                            time.save()
+                            #if str(time.time) == str(old_slot_time):
+                            #    time.occupied = False
+                            #    time.occupant = None
+                            #    time.booking_id = None
+                            #    time.save()
+#
+                data['booking_id'] = booking.booking_id
+                data['slot_id'] = staff_slot.id
+                data['slot_time'] = slot_time
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        payload['message'] = "Appointment rescheduled successfully"
+        payload['data'] = data
+
+        return Response(payload)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def reschedule_appointment_view777(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
         client_id = request.data.get('client_id', "")
         booking_id = request.data.get('booking_id', "")
         slot_id = request.data.get('slot_id', "")
@@ -1067,4 +1161,82 @@ def get_booking_chat_messages(request):
         'get-all-messages',
         {'messages': data}
     )
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def client_bookings_chat(request):
+    payload = {}
+    data = {}
+    user_data = {}
+    errors = {}
+
+    bookings = []
+
+    user_id = request.query_params.get('user_id', None)
+
+    if not user_id:
+        errors['user_id'] = ['User ID is required.']
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except:
+        errors['user_id'] = ['User does not exist']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+    client_chat_rooms = PrivateChatRoom.objects.filter(client=user)
+    client_chat_rooms_serializers = PrivateRoomSerializer(client_chat_rooms, many=True)
+    _client_chat_rooms_serializers = client_chat_rooms_serializers.data
+
+    payload['message'] = "Successful"
+    payload['data'] = _client_chat_rooms_serializers
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', ])
+@permission_classes([IsAuthenticated, ])
+@authentication_classes([TokenAuthentication, ])
+def shop_bookings_chat(request):
+    payload = {}
+    data = {}
+    user_data = {}
+    errors = {}
+
+    bookings = []
+
+    user_id = request.query_params.get('user_id', None)
+
+    if not user_id:
+        errors['user_id'] = ['User ID is required.']
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except:
+        errors['user_id'] = ['User does not exist']
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+    shop_chat_rooms = PrivateChatRoom.objects.filter(shop=user)
+    shop_chat_rooms_serializers = PrivateRoomSerializer(shop_chat_rooms, many=True)
+    _shop_chat_rooms_serializers = shop_chat_rooms_serializers.data
+
+    payload['message'] = "Successful"
+    payload['data'] = _shop_chat_rooms_serializers
+
     return Response(payload, status=status.HTTP_200_OK)
