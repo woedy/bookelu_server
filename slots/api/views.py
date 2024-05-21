@@ -18,11 +18,118 @@ from slots.models import StaffSlot, TimeSlot
 
 User = get_user_model()
 
-
 @api_view(['POST', ])
 @permission_classes([])
 @authentication_classes([])
 def set_staff_slot(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        staff_user_id = request.data.get('staff_user_id', "")
+        shop_id = request.data.get('shop_id', "")
+        timezone = request.data.get('timezone', "")
+        availability = request.data.get('availability', [])
+
+        if not staff_user_id:
+            errors['staff_user_id'] = ['Staff User ID is required.']
+
+        if not shop_id:
+            errors['shop_id'] = ['Shop ID is required.']
+
+        if not timezone:
+            errors['timezone'] = ['Timezone is required.']
+
+        if not availability:
+            errors['availability'] = ['Availability is required.']
+
+        try:
+            shop = Shop.objects.get(shop_id=shop_id)
+        except Shop.DoesNotExist:
+            errors['shop_id'] = ['Shop does not exist.']
+
+        try:
+            staff = User.objects.get(user_id=staff_user_id)
+            interval = staff.availability_interval
+
+            if interval is None:
+                errors['availability'] = [f'Please set your availability interval first.']
+                payload['message'] = "Errors"
+                payload['errors'] = errors
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+            # Fetch the existing slots for the practitioner
+            existing_slots = StaffSlot.objects.filter(user=staff)
+            existing_slot_dates = existing_slots.values_list('slot_date', flat=True)
+
+            staff_list = ['Saloon Staff']
+            if staff.user_type in staff_list:
+                for slot_data in availability:
+                    slot_date = slot_data.get('date')
+                    new_time_slots = slot_data.get('time_slots')
+
+                    # Convert the times to datetime objects
+                    # # Check if the times are at least  hours apart
+                    # if not are_times_spaced(interval, time_objects):
+                    #     errors['availability'] = [f'Times provided should be at least {interval} apart.']
+                    #     payload['message'] = "Errors"
+                    #     payload['errors'] = errors
+                    #     return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+                    # Check if a slot with the same date already exists
+                    existing_slot = existing_slots.filter(slot_date=slot_date).first()
+
+                    if existing_slot:
+                        # Slot already exists, update it
+                        existing_time_slots = TimeSlot.objects.filter(staff_slot=existing_slot)
+
+                        # Iterate through the new time slots
+                        for time in new_time_slots:
+                            existing_time_slot = existing_time_slots.filter(time=time).first()
+                            if existing_time_slot:
+                                if existing_time_slot.occupied:
+                                    # Time slot is occupied, continue to the next slot
+                                    continue
+                            else:
+                                # Create a new time slot if it doesn't exist
+                                TimeSlot.objects.create(
+                                    staff_slot=existing_slot,
+                                    time=time,
+                                    occupied=False
+                                )
+                        # Delete time slots that are not in the new list
+                        existing_time_slots.filter(~Q(time__in=new_time_slots)).delete()
+                    else:
+                        # Slot doesn't exist, create a new slot
+                        new_slot = StaffSlot.objects.create(user=staff, slot_date=slot_date)
+                        for time in new_time_slots:
+                            TimeSlot.objects.create(
+                                staff_slot=new_slot,
+                                time=time,
+                                occupied=False
+                            )
+
+                # Delete slots that are not in the new list
+                existing_slots.filter(~Q(slot_date__in=[s['date'] for s in availability])).delete()
+
+        except User.DoesNotExist:
+            errors['staff_id'] = ['Staff does not exist.']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        payload['message'] = "Slot added or updated successfully"
+        payload['data'] = data
+
+        return Response(payload)
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def set_staff_slot22222(request):
     payload = {}
     data = {}
     errors = {}
