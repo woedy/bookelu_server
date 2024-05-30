@@ -127,4 +127,33 @@ def unique_staff_id_generator(instance):
 
 
 
+def unique_account_id_generator(instance):
+    """
+    This is for a account_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(5, 7)
+    account_id = "ACC-" + random_string_generator(size=size, chars=string.ascii_uppercase + string.digits) + "-(BNK)"
 
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(account_id=account_id).exists()
+    if qs_exists:
+        return None
+    return account_id
+
+
+def unique_transaction_id_generator(instance):
+    """
+    This is for a transaction_id field
+    :param instance:
+    :return:
+    """
+    size = random.randint(5, 7)
+    transaction_id = "TRN-" + random_string_generator(size=size, chars=string.ascii_uppercase + string.digits) + "-(P)"
+
+    Klass = instance.__class__
+    qs_exists = Klass.objects.filter(transaction_id=transaction_id).exists()
+    if qs_exists:
+        return None
+    return transaction_id

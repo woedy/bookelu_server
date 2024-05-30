@@ -12,6 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model, authenticate
 from django.template.loader import get_template
+
+from bank_account.models import BankAccount
 from bookelu_project.tasks import send_generic_email
 
 from accounts.api.serializers import UserRegistrationSerializer, StaffRegistrationSerializer
@@ -191,7 +193,6 @@ def admin_add_shop_view(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 
-# Create your views here.
 @api_view(['POST', ])
 @permission_classes([])
 @authentication_classes([])
@@ -214,6 +215,7 @@ def add_shop_view(request):
     location_lng = request.data.get('location_lng', '')
     business_type = request.data.get('business_type', '')
     business_logo = request.data.get('business_logo', '')
+    cvr = request.data.get('cvr', '')
     password = request.data.get('password', '')
     password2 = request.data.get('password2', '')
 
@@ -274,11 +276,19 @@ def add_shop_view(request):
         lng=location_lng,
         business_type=business_type,
         photo=business_logo,
+        cvr=cvr,
 
     )
 
     new_shop.shop_registered = True
     new_shop.save()
+
+    new_bank_account = BankAccount.objects.create(
+        user=user,
+
+    )
+    data['account_id'] = new_bank_account.account_id
+
 
     token = Token.objects.get(user=user).key
     data['token'] = token
@@ -327,6 +337,98 @@ def add_shop_view(request):
         user=user,
         subject="Shop Registration",
         body=user.email + " Just created an account."
+    )
+    new_activity.save()
+
+    payload['message'] = "Successful"
+    payload['data'] = data
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def edit_shop_view(request):
+    payload = {}
+    data = {}
+    errors = {}
+
+    shop_id = request.data.get('shop_id', '')
+
+    full_name = request.data.get('full_name', '')
+    contact = request.data.get('contact', '')
+    email = request.data.get('email', '')
+    country = request.data.get('country', '')
+    street_address1 = request.data.get('street_address1', '')
+    street_address2 = request.data.get('street_address2', '')
+    city = request.data.get('city', '')
+    state = request.data.get('state', '')
+    zipcode = request.data.get('zipcode', '')
+    location_name = request.data.get('location_name', '')
+    location_lat = request.data.get('location_lat', '')
+    location_lng = request.data.get('location_lng', '')
+    business_type = request.data.get('business_type', '')
+    business_logo = request.data.get('business_logo', '')
+    cvr = request.data.get('cvr', '')
+
+    if not email:
+        errors['email'] = ['User Email is required.']
+    elif not is_valid_email(email):
+        errors['email'] = ['Valid email required.']
+
+    if not shop_id:
+        errors['shop_id'] = ['Shop ID is required.']
+
+    if not full_name:
+        errors['full_name'] = ['Shop full name is required.']
+
+    if not contact:
+        errors['contact'] = ['Contact number is required.']
+
+
+    try:
+        shop = Shop.objects.get(shop_id=shop_id)
+    except:
+        errors['shop_id'] = ['Shop does not exist.']
+
+
+
+    if errors:
+        payload['message'] = "Errors"
+        payload['errors'] = errors
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    shop_user = shop.user
+    shop_user.email = email
+    shop_user.full_name = full_name
+    shop_user.save()
+
+    shop.email = email
+    shop.shop_name = full_name
+    shop.phone = contact
+    shop.country = country
+    shop.street_address1 = street_address1
+    shop.street_address2 = street_address2
+    shop.city = city
+    shop.state = state
+    shop.zipcode = zipcode
+    shop.location_name = location_name
+    shop.lat = location_lat
+    shop.lng = location_lng
+    shop.business_type = business_type
+    shop.photo = business_logo
+    shop.cvr = cvr
+
+    shop.save()
+
+
+    data['shop_id'] = shop.shop_id
+
+    new_activity = AllActivity.objects.create(
+        user=shop_user,
+        subject="Shop Edited",
+        body=shop.email + " Just edited an account."
     )
     new_activity.save()
 

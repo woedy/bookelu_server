@@ -64,7 +64,8 @@ INSTALLED_APPS = [
     'bookings',
     'admin_app',
     'chats',
-    'slots'
+    'slots',
+    'bank_account'
 
 ]
 

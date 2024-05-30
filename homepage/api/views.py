@@ -124,7 +124,7 @@ def client_homepage_view(request):
 
 
 
-    _bookings = Booking.objects.filter(client=user).order_by('-created_at')
+    _bookings = Booking.objects.filter(client=user).filter(status="Pending").order_by('-created_at')
     booking_serializer = ListBookingSerializer(_bookings, many=True)
     if booking_serializer:
         bookings_today = booking_serializer.data

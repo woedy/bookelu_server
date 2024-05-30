@@ -93,6 +93,7 @@ class Shop(models.Model):
     business_type = models.CharField(max_length=255, choices=BUSINESS_TYPE_CHOICES, blank=True, null=True)
     country = models.CharField(max_length=255, blank=True, null=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
+    cvr = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField( null=True, blank=True)
 
 

@@ -4,6 +4,8 @@ from rest_framework import serializers
 from shop.models import Shop, ShopService, ShopInterior, ShopExterior, ShopWork, ShopStaff, ShopPackage, \
     ShopAvailability, ServiceSpecialist
 from slots.api.serializers import StaffSlotSerializer
+from datetime import date
+
 
 User = get_user_model()
 
@@ -32,12 +34,18 @@ class ShopServiceDetailSerializer(serializers.ModelSerializer):
 
 
 class StaffUserSerializer(serializers.ModelSerializer):
-    staff_slot = StaffSlotSerializer(many=True)
+    staff_slot = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
             'staff_slot'
         ]
+
+    def get_staff_slot(self, obj):
+        staff_slots = obj.staff_slot.filter(slot_date__gte=date.today())
+        return StaffSlotSerializer(staff_slots, many=True).data
+
+
 class SpecialistSerializer(serializers.ModelSerializer):
     user = StaffUserSerializer(many=False)
     class Meta:
@@ -153,7 +161,7 @@ class ShopDetailSerializer(serializers.ModelSerializer):
             'shop_exterior',
             'shop_work',
             'shop_staffs',
-            #'shop_packages',
+            'cvr',
 
         ]
 

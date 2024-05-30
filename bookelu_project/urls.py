@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/bookings/', include('bookings.api.urls', 'bookings_api')),
     path('api/admin-app/', include('admin_app.api.urls', 'admin_app_api')),
     path('api/slots/', include('slots.api.urls', 'slots_api')),
+    path('api/bank_account/', include('bank_account.api.urls', 'bank_account_api')),
     path("chat/", include("chats.urls")),
 
 ]

@@ -2,12 +2,13 @@ from django.urls import path
 
 from accounts.api.views import register_user, verify_user_email, resend_email_verification, UserLogin, \
     PasswordResetView, confirm_otp_password_view, resend_password_otp, new_password_reset_view, remove_user_view, \
-    ShopLogin
+    ShopLogin, register_bookelu_admin
 
 app_name = 'accounts'
 
 urlpatterns = [
     path('register-user/', register_user, name="register_user"),
+    path('register-bookelu-admin/', register_bookelu_admin, name="register_bookelu_admin"),
     path('verify-user-email/', verify_user_email, name="verify_user_email"),
     path('resend-email-verification/', resend_email_verification, name="resend_email_verification"),
     path('login-user/', UserLogin.as_view(), name="login_user"),

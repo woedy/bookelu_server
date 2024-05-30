@@ -1,3 +1,6 @@
+import re
+from decimal import Decimal
+
 from django.utils import timezone
 
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +11,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 
 from activities.models import AllActivity
+from bank_account.models import BankAccount
 from bookings.api.serializers import ListBookingSerializer, BookingSerializer
 from bookings.models import Booking, BookingPayment, BookingRating, WalkInBooking
 from chats.api.serializers import PrivateRoomChatMessageSerializer, PrivateRoomSerializer
@@ -283,6 +287,23 @@ def book_appointment_view(request):
             errors['package_id'] = ['Package does not exist']
 
         try:
+            client_account = BankAccount.objects.get(user=client)
+        except BankAccount.DoesNotExist:
+            errors['account_id'] = ['Client Bank Account does not exist']
+
+        client_account_balance = client_account.balance
+
+        if extract_amount(package.price) >= client_account_balance:
+            errors['booking_id'] = [
+                'You dont have enough money to book this appointment. Deposit enough money in your account and book again']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+        try:
             staff_slot = StaffSlot.objects.get(id=slot_id)
 
             #admin = User.objects.filter(company=company, user_type="Admin").first()
@@ -296,6 +317,14 @@ def book_appointment_view(request):
                 booked_staff=staff
             ).first()
 
+
+
+            # Check for appointment interval
+            _slot_date = staff_slot.slot_date
+            staff_interval = staff.user.availability_interval
+
+
+
             if existing_booking:
                 errors['slot_date'] = ['Booking for this date and time already exists.']
                 payload['message'] = "Errors"
@@ -304,12 +333,7 @@ def book_appointment_view(request):
 
 
 
-            # Check for appointment interval
-            _slot_date = staff_slot.slot_date
-            staff_interval = staff.user.availability_interval
-
             package = ShopPackage.objects.get(id=package_id)
-
 
 
             new_booking = Booking.objects.create(
@@ -340,6 +364,26 @@ def book_appointment_view(request):
 
             new_booking.room = new_room
             new_booking.save()
+
+            ### MAKE PAYMENT FOR RESERVATION
+
+            try:
+                bookelu_admin = User.objects.get(user_type="Admin")
+            except User.DoesNotExist:
+                errors['admin'] = ['Admin does not exist']
+
+
+            try:
+                bookelu_account = BankAccount.objects.get(user=bookelu_admin)
+            except BankAccount.DoesNotExist:
+                return Response({'message': 'Bookelu Bank account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if client_account.withdraw(extract_amount(package.price), f'Transfer to {bookelu_account}'):
+                bookelu_account.deposit(extract_amount(package.price), f'Transfer from {client_account.account_id}')
+
+
+                ################################
+
 
             slot_times = TimeSlot.objects.filter(staff_slot=staff_slot)
 
@@ -405,7 +449,18 @@ def book_appointment_view(request):
         return Response(payload)
 
 
-
+def extract_amount(value):
+    # This regular expression matches digits in the string
+    match = re.search(r'\d+', value)
+    if match:
+        return int(match.group())
+    return None
+def extract_bookelu_amount(value):
+    # This regular expression matches digits in the string
+    match = re.search(r'\d+', value)
+    if match:
+        return int(match.group())
+    return None
 
 @api_view(['POST', ])
 @permission_classes([IsAuthenticated, ])
@@ -853,6 +908,33 @@ def cancel_appointment_view(request):
     booking.save()
 
 
+    ### MAKE PAYMENT TO SHOP
+
+    try:
+        bookelu_admin = User.objects.get(user_type="Admin")
+    except User.DoesNotExist:
+        errors['admin'] = ['Admin does not exist']
+
+    try:
+        client_account = BankAccount.objects.get(user=booking.client)
+    except BankAccount.DoesNotExist:
+        return Response({'message': 'Client Bank account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        bookelu_account = BankAccount.objects.get(user=bookelu_admin)
+    except BankAccount.DoesNotExist:
+        return Response({'message': 'Bookelu Bank account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    cancellation_policy = Decimal('0.1')
+    policy_amount = extract_amount(booking.amount_to_pay) * cancellation_policy
+    transfer_amount = extract_amount(booking.amount_to_pay) - policy_amount
+
+    if bookelu_account.withdraw(transfer_amount, f'Transfer to {client_account}'):
+        client_account.deposit(transfer_amount, f'Transfer from {bookelu_account.account_id}')
+        ################################
+
+
+
     data['booking_id'] = booking.booking_id
 
     payload['message'] = "Successful"
@@ -888,6 +970,30 @@ def complete_appointment_view(request):
     booking.status = "Completed"
     booking.save()
 
+    ### MAKE PAYMENT TO SHOP
+
+    try:
+        bookelu_admin = User.objects.get(user_type="Admin")
+    except User.DoesNotExist:
+        errors['admin'] = ['Admin does not exist']
+
+    try:
+        shop_account = BankAccount.objects.get(user=booking.shop.user)
+    except BankAccount.DoesNotExist:
+        return Response({'message': 'Shop Bank account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        bookelu_account = BankAccount.objects.get(user=bookelu_admin)
+    except BankAccount.DoesNotExist:
+        return Response({'message': 'Bookelu Bank account not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    bookelu_share = Decimal('0.2')
+    share_amount = extract_amount(booking.amount_to_pay) * bookelu_share
+    transfer_amount = extract_amount(booking.amount_to_pay) - share_amount
+
+    if bookelu_account.withdraw(transfer_amount, f'Transfer to {shop_account}'):
+        shop_account.deposit(transfer_amount, f'Transfer from {bookelu_account.account_id}')
+        ################################
 
     data['booking_id'] = booking.booking_id
 

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from accounts.api.serializers import UserRegistrationSerializer, PasswordResetSerializer
 from activities.models import AllActivity
+from bank_account.models import BankAccount
 from bookelu_project.utils import generate_email_token, generate_random_otp_code
 from bookelu_project.tasks import send_generic_email
 from bookings.models import Booking
@@ -98,9 +99,154 @@ def register_user(request):
             )
             user_profile.save()
 
+            new_bank_account = BankAccount.objects.create(
+                user=user,
+
+            )
+
             data['phone'] = user_profile.phone
             data['country'] = user_profile.country
             data['photo'] = user_profile.photo.url
+            data['account_id'] = new_bank_account.account_id
+
+        token = Token.objects.get(user=user).key
+        data['token'] = token
+
+        email_token = generate_email_token()
+
+        user = User.objects.get(email=email)
+        user.email_token = email_token
+        user.save()
+
+        context = {
+            'email_token': email_token,
+            'email': user.email,
+            'full_name': user.full_name
+        }
+
+        txt_ = get_template("registration/emails/verify.html").render(context)
+        html_ = get_template("registration/emails/verify.txt").render(context)
+
+        subject = 'EMAIL CONFIRMATION CODE'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [user.email]
+
+
+
+        # # Use Celery chain to execute tasks in sequence
+        # email_chain = chain(
+        #     send_generic_email.si(subject, txt_, from_email, recipient_list, html_),
+        # )
+        # # Execute the Celery chain asynchronously
+        # email_chain.apply_async()
+
+        send_mail(
+            subject,
+            txt_,
+            from_email,
+            recipient_list,
+            html_message=html_,
+            fail_silently=False,
+        )
+
+
+
+#
+        new_activity = AllActivity.objects.create(
+            user=user,
+            subject="User Registration",
+            body=user.email + " Just created an account."
+        )
+        new_activity.save()
+
+        payload['message'] = "Successful"
+        payload['data'] = data
+
+    return Response(payload)
+
+
+@api_view(['POST', ])
+@permission_classes([])
+@authentication_classes([])
+def register_bookelu_admin(request):
+
+    payload = {}
+    data = {}
+    errors = {}
+
+    if request.method == 'POST':
+        email = request.data.get('email', "").lower()
+        full_name = request.data.get('full_name', "")
+        phone = request.data.get('phone', "")
+        photo = request.FILES.get('photo')
+        #photo = request.data.get('photo', "")
+        country = request.data.get('country', "")
+        password = request.data.get('password', "")
+        password2 = request.data.get('password2', "")
+
+
+        if not email:
+            errors['email'] = ['User Email is required.']
+        elif not is_valid_email(email):
+            errors['email'] = ['Valid email required.']
+        elif check_email_exist(email):
+            errors['email'] = ['Email already exists in our database.']
+
+        if not full_name:
+            errors['full_name'] = ['Full Name is required.']
+
+        if not phone:
+            errors['phone'] = ['Phone number is required.']
+
+        if not country:
+            errors['country'] = ['Country is required.']
+
+
+        if not password:
+            errors['password'] = ['Password is required.']
+
+        if not password2:
+            errors['password2'] = ['Password2 is required.']
+
+        if password != password2:
+            errors['password'] = ['Passwords dont match.']
+
+        if not is_valid_password(password):
+            errors['password'] = ['Password must be at least 8 characters long\n- Must include at least one uppercase letter,\n- One lowercase letter, one digit,\n- And one special character']
+
+        if errors:
+            payload['message'] = "Errors"
+            payload['errors'] = errors
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            data["user_id"] = user.user_id
+            data["email"] = user.email
+            data["full_name"] = user.full_name
+
+            user.user_type = "Admin"
+            user.save()
+
+            user_profile = UserProfile.objects.create(
+                user=user,
+                phone=phone,
+                country=country,
+                photo=photo  # Save the photo as ContentFile
+
+            )
+            user_profile.save()
+
+            new_bank_account = BankAccount.objects.create(
+                user=user,
+
+            )
+
+            data['phone'] = user_profile.phone
+            data['country'] = user_profile.country
+            data['photo'] = user_profile.photo.url
+            data['account_id'] = new_bank_account.account_id
 
         token = Token.objects.get(user=user).key
         data['token'] = token

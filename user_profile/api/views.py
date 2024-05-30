@@ -5,6 +5,7 @@ from rest_framework.decorators import permission_classes, api_view, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from bookings.api.serializers import ListBookingSerializer
 from bookings.models import Booking
 from user_profile.models import UserProfile
 
@@ -35,20 +36,17 @@ def get_user_profile_view(request):
 
     user_data['photo'] = personal_info.photo.url
     user_data['phone'] = personal_info.phone
+    user_data['country'] = personal_info.country
     user_data['bookings_count'] = bookings.count()
     data['user_data'] = user_data
 
-    for booking in bookings:
-        _data = {
-            "photo": booking.shop.photo.url,
-            "shop_name": booking.shop.shop_name,
-            "price": booking.actual_price,
-            "service": booking.service_type,
-            "booking_date": booking.booking_date,
-            "booking_time": booking.booking_time,
-        }
 
-        all_bookings.append(_data)
+
+    _bookings = Booking.objects.filter(client=user).order_by('-created_at')
+    booking_serializer = ListBookingSerializer(_bookings, many=True)
+    if booking_serializer:
+        all_bookings = booking_serializer.data
+
 
     data['bookings'] = all_bookings
 
