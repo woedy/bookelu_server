@@ -453,8 +453,8 @@ def setup_shop_view(request):
     business_hours_close = request.data.get('business_hours_close', '')
     special_features = request.data.get('special_features', '')
 
-    if not description:
-        errors['description'] = ["Description required"]
+    #if not description:
+    #    errors['description'] = ["Description required"]
 
     if not shop_id:
         errors['shop_id'] = ['Shop ID is required.']
@@ -703,8 +703,8 @@ def setup_services_view(request):
     #if not price:
     #    errors['price'] = ["Price required"]
 
-    if not description:
-        errors['description'] = ["Description required"]
+    #if not description:
+    #    errors['description'] = ["Description required"]
 
     # if not duration:
     #     errors['duration'] = ["Duration required"]
